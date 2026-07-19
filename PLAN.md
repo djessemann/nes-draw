@@ -1,4 +1,4 @@
-# nesprite draw — Product & Technical Plan
+# nes draw — Product & Technical Plan
 
 A touch-first web app for laying out NES game maps (Zelda-, Dragon Quest-style) from NES
 graphics tiles — the world-building companion to [nesprite](https://github.com/djessemann/nesprite),
@@ -178,13 +178,13 @@ a small two-pointer gesture layer on top of the same plumbing.)
 
 ## 6. Data model
 
-One JSON document, `format: "nesprite-draw-v1"`, autosaved to `localStorage` (nesprite pattern:
+One JSON document, `format: "nes-draw-v1"`, autosaved to `localStorage` (nesprite pattern:
 same shape as the saved file, `LS_KEY`, debounced `scheduleSave()` in `render()`, flush on
 `pagehide`):
 
 ```jsonc
 {
-  "format": "nesprite-draw-v1",
+  "format": "nes-draw-v1",
   "name": "overworld",              // optional, promptModal() on save, sanitized like nesprite
   "mode": "rooms",                  // "rooms" | "scroll"
   "screen": { "w": 16, "h": 11 },   // tiles per screen
@@ -205,7 +205,7 @@ same shape as the saved file, `LS_KEY`, debounced `scheduleSave()` in `render()`
   "walls are solid"; exporters turn this into collision tables.
 - Screens are windows onto the one big map array — switching rooms ↔ scroll never converts data.
 - Save/load follows nesprite exactly: timestamped filenames via `fname()`
-  (`nesprite-draw-<name>-20260718-153012.json`), name prompt on `save` only, `new` clears with a
+  (`nes-draw-<name>-20260718-153012.json`), name prompt on `save` only, `new` clears with a
   `confirmModal()`.
 
 ## 7. Export — the "hand it to Claude" story

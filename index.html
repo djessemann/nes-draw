@@ -3,25 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>nesprite draw</title>
-<meta name="description" content="nesprite draw — a NES graphics maker in your browser.">
+<title>nes draw</title>
+<meta name="description" content="nes draw — a NES graphics maker in your browser.">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#000000">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="nesprite draw">
-<meta property="og:title" content="nesprite draw — NES graphics maker">
+<meta property="og:site_name" content="nes draw">
+<meta property="og:title" content="nes draw — NES graphics maker">
 <meta property="og:description" content="Make NES graphics in your browser.">
-<meta property="og:url" content="https://djessemann.github.io/nesprite-draw/">
-<meta property="og:image" content="https://djessemann.github.io/nesprite-draw/og.png">
+<meta property="og:url" content="https://djessemann.github.io/nes-draw/">
+<meta property="og:image" content="https://djessemann.github.io/nes-draw/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="nesprite draw — NES graphics maker">
+<meta name="twitter:title" content="nes draw — NES graphics maker">
 <meta name="twitter:description" content="Make NES graphics in your browser.">
-<meta name="twitter:image" content="https://djessemann.github.io/nesprite-draw/og.png">
+<meta name="twitter:image" content="https://djessemann.github.io/nes-draw/og.png">
 <style>
   :root {
     --bg: #000000; --ink: #ffffff; --line: #ffffff; --muted: #999999; --soft: #666666;
@@ -281,7 +281,7 @@
 </div>
 
 <script>
-/* nesprite-draw — single-file, offline, mobile-friendly NES sprite & map editor.
+/* nes-draw — single-file, offline, mobile-friendly NES sprite & map editor.
    The 2.0 line of nesprite; project format "nes-sprite-editor-v1" is shared with nesprite 1.0
    (this app adds map.worldW/worldH, which 1.0 safely ignores). */
 
@@ -952,9 +952,9 @@ function buildProject() {
 // Own key — nesprite 1.0 shares the github.io origin, so reusing its key would clobber it.
 // Read-only fallbacks: first boot adopts an autosave from the earlier 2.0 key or from
 // nesprite 1.0 (never writes either back).
-const LS_KEY = "nesprite-draw-autosave";
+const LS_KEY = "nes-draw-autosave";
 function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(buildProject())); } catch (e) {} }
-function loadLocal() { try { const s = localStorage.getItem(LS_KEY) || localStorage.getItem("nes-mapmaker-autosave") || localStorage.getItem("nesprite-autosave"); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+function loadLocal() { try { const s = localStorage.getItem(LS_KEY) || localStorage.getItem("nesprite-draw-autosave") || localStorage.getItem("nes-mapmaker-autosave") || localStorage.getItem("nesprite-autosave"); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
 let saveTimer = null;
 // Debounced; skip while a selection/lasso is floating so we never commit it mid-drag.
 function scheduleSave() { if (sel || lasso) return; clearTimeout(saveTimer); saveTimer = setTimeout(saveLocal, 400); }
@@ -996,8 +996,8 @@ document.getElementById("newProject").onclick = async () => {
 };
 
 function download(filename, blob) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href); }
-// Unique, sortable export names so saves don't collide in one folder, e.g. nesprite-draw-20260619-153012.json
-function fname(ext, tag) { const d = new Date(), p = n => String(n).padStart(2, "0"); return "nesprite-draw-" + (tag ? tag + "-" : "") + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + "." + ext; }
+// Unique, sortable export names so saves don't collide in one folder, e.g. nes-draw-20260619-153012.json
+function fname(ext, tag) { const d = new Date(), p = n => String(n).padStart(2, "0"); return "nes-draw-" + (tag ? tag + "-" : "") + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + "." + ext; }
 document.getElementById("saveJson").onclick = async () => {
   const name = await promptModal("name your project", "save", projectName);
   if (name === null) return; // cancelled
@@ -1009,7 +1009,7 @@ document.getElementById("loadJson").onclick = () => document.getElementById("fil
 document.getElementById("fileInput").onchange = e => {
   const file = e.target.files[0]; if (!file) return;
   const r = new FileReader();
-  r.onload = () => { try { loadProject(JSON.parse(r.result)); } catch (err) { alertModal("Couldn't open that file. Make sure it's a project you saved from nesprite draw (a .json file), then try again."); } };
+  r.onload = () => { try { loadProject(JSON.parse(r.result)); } catch (err) { alertModal("Couldn't open that file. Make sure it's a project you saved from nes draw (a .json file), then try again."); } };
   r.readAsText(file); e.target.value = "";
 };
 function parseDoc(o, mode) { // one workspace from saved JSON (null if absent)
@@ -1108,7 +1108,7 @@ document.getElementById("exportAsm").onclick = () => {
   const tw = state.tilesW, th = state.tilesH, tpf = tw * th, w = W(), h = H();
   const tile = isTile(), unit = tile ? "tile" : "frame", n = state.frames.length;
   const ticks = ticksPerFrame(state.fps);
-  let s = "; Generated by nesprite draw — https://djessemann.github.io/nesprite-draw/\n";
+  let s = "; Generated by nes draw — https://djessemann.github.io/nes-draw/\n";
   s += "; " + w + "x" + h + " px per " + unit + " (" + tw + "x" + th + " tiles of 8x8), " + n + " " + unit + (n === 1 ? "" : "s") + "\n";
   s += ";\n";
   s += "; FORMAT — NES CHR, 2bpp planar. Each 8x8 tile is 16 bytes:\n";
@@ -1260,10 +1260,10 @@ function runExportSelfTests() {
     t("round-trip " + tw + "x" + th, () => roundTripFrames([{ px: art(tw, th, tw + th * 3) }], tw, th));
   t("multi-frame", () => roundTripFrames([0, 1, 2].map(i => ({ px: art(2, 2, i) })), 2, 2));
   t("fully transparent", () => roundTripFrames([{ px: new Uint8Array(256) }], 2, 2));
-  if (fails.length) console.error("nesprite-draw export self-tests FAILED:\n" + fails.join("\n"));
+  if (fails.length) console.error("nes-draw export self-tests FAILED:\n" + fails.join("\n"));
   return fails.length ? fails : "all export self-tests passed";
 }
-window.nespriteDrawSelfTest = runExportSelfTests;
+window.nesDrawSelfTest = runExportSelfTests;
 window.nespriteSelfTest = runExportSelfTests; // 1.0 name, kept so muscle memory still works
 
 // ---- Boot ----
