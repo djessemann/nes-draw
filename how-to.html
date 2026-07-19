@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How to — nesprite</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#000000">
+<meta property="og:title" content="How to — nesprite">
+<meta property="og:description" content="How to use nesprite, the browser-based NES sprite & tile editor.">
+<meta property="og:image" content="https://djessemann.github.io/nesprite/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://djessemann.github.io/nesprite/og.png">
+<style>
+  :root { --bg: #000000; --ink: #ffffff; --line: #ffffff; --muted: #999999; --soft: #222222; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 28px 18px 80px; }
+  nav { margin-bottom: 24px; }
+  .back { display: inline-block; background: var(--bg); color: var(--ink); font-weight: 700;
+          text-decoration: none; padding: 9px 16px; border: 1px solid var(--line); }
+  .back:active { background: #222; }
+  h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: .5px; }
+  .lede { color: var(--muted); margin: 0 0 22px; }
+  h2 { font-size: 15px; margin: 30px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px;
+       text-transform: lowercase; letter-spacing: .5px; }
+  p, li { color: #dddddd; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 7px; }
+  kbd { background: var(--soft); border: 1px solid var(--line); padding: 1px 6px; font-size: 13px; }
+  .pill { display: inline-block; background: var(--soft); border: 1px solid var(--line);
+          padding: 1px 7px; font-size: 13px; }
+  .tag { font-weight: 700; }
+  code { background: var(--soft); border: 1px solid var(--soft); padding: 0 4px; }
+
+  /* sprite / tile tab toggle — same segmented look as the editor */
+  .tabs { display: inline-flex; border: 1px solid var(--line); margin-bottom: 8px; }
+  .tabs button { font: inherit; font-size: 14px; background: var(--bg); color: var(--ink);
+    border: 0; border-right: 1px solid var(--line); padding: 9px 22px; cursor: pointer; letter-spacing: .5px; }
+  .tabs button:last-child { border-right: 0; }
+  .tabs button.on { background: var(--ink); color: #000; font-weight: 700; }
+  .guide[hidden] { display: none; }
+  .guide > h2:first-child { margin-top: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav><a class="back" href="index.html">← Back to the editor</a></nav>
+
+  <h1>How to use nesprite</h1>
+  <p class="lede">Make NES graphics in your browser on the real NES palette, and export to 6502
+     assembly, PNG, or GIF. The toggle at the top left of the editor switches between
+     <strong>sprite</strong> mode (moving characters, animated) and <strong>tile</strong> mode
+     (backgrounds you arrange into scenes). The two are separate workspaces and auto-save.</p>
+
+  <div class="tabs" id="tabs">
+    <button data-tab="sprite" class="on">sprite mode</button>
+    <button data-tab="tile">tile mode</button>
+  </div>
+
+  <!-- ===================== SPRITE GUIDE ===================== -->
+  <section class="guide" id="guide-sprite">
+    <h2>1. Size</h2>
+    <p>In the <span class="pill">size</span> box, set the tiles wide/tall and press
+       <span class="pill">resize</span> (<span class="pill">2 × 2</span> = a 16×16 character).</p>
+
+    <h2>2. Colors</h2>
+    <p>Tap one of the 3 color slots, then a color in the <strong>NES master palette</strong> to assign
+       it (keys <kbd>1</kbd>–<kbd>3</kbd>). Color 0 is transparent — use the <span class="tag">eraser</span>.</p>
+
+    <h2>3. Draw</h2>
+    <ul>
+      <li><span class="tag">pencil</span> (<kbd>B</kbd>) — paint with the active slot.</li>
+      <li><span class="tag">eraser</span> (<kbd>E</kbd>) — erase to transparent.</li>
+      <li><span class="tag">fill</span> (<kbd>G</kbd>) — flood-fill.</li>
+      <li><span class="tag">lasso</span> (<kbd>L</kbd>) — outline pixels, then drag to move them.</li>
+    </ul>
+    <p><span class="pill">↔ flip</span>/<span class="pill">↕ flip</span> mirror the frame,
+       <span class="pill">clear</span> empties it, <span class="pill">↶ undo</span> (<kbd>Ctrl/⌘+Z</kbd>),
+       <span class="pill">grid</span> toggles the lines.</p>
+
+    <h2>4. Animate</h2>
+    <p><span class="pill">+ add</span> / <span class="pill">duplicate</span> /
+       <span class="pill">delete</span> frames, set <span class="pill">fps</span>, and
+       <span class="pill">▶ play</span> to preview.</p>
+
+    <h2>5. Export</h2>
+    <ul>
+      <li><span class="tag">save</span> / <span class="tag">load</span> — your project as
+          <code>.json</code> (holds both modes). Save asks for an optional project name,
+          which becomes part of the file name and is remembered for next time.</li>
+      <li><span class="tag">6502</span> — <code>.s</code> file: <code>sprite_palette</code> + CHR tile data. The file documents
+          its own format (byte layout, tile order, timing) and includes each frame's pixels as comments.</li>
+      <li><span class="tag">png</span> — frames in a row, transparent background.</li>
+      <li><span class="tag">gif</span> — animated at the current fps, transparent background.</li>
+    </ul>
+  </section>
+
+  <!-- ===================== TILE GUIDE ===================== -->
+  <section class="guide" id="guide-tile" hidden>
+    <h2>1. Tile size</h2>
+    <p>Defaults to <span class="pill">1 × 1</span> (8×8). For a metatile, change the
+       <span class="pill">size</span> box and press <span class="pill">resize</span>.</p>
+
+    <h2>2. Colors</h2>
+    <p>4 paintable slots. Slot 0 (<span class="pill">bg</span>) is the drawn <strong>backdrop</strong>,
+       not transparent. Tap a slot, then a color in the <strong>NES master palette</strong> (keys
+       <kbd>0</kbd>–<kbd>3</kbd>).</p>
+
+    <h2>3. Draw a tile</h2>
+    <p>Tap a tile in the <strong>tileset</strong> to edit it, then:</p>
+    <ul>
+      <li><span class="tag">pencil</span> (<kbd>B</kbd>) — paint with the active slot.</li>
+      <li><span class="tag">eraser</span> (<kbd>E</kbd>) — erase to the backdrop (color 0).</li>
+      <li><span class="tag">fill</span> (<kbd>G</kbd>) — flood-fill.</li>
+      <li><span class="tag">lasso</span> (<kbd>L</kbd>) — outline pixels, then drag to move them.</li>
+    </ul>
+    <p><span class="pill">↔ flip</span>/<span class="pill">↕ flip</span> mirror the tile,
+       <span class="pill">clear</span>, <span class="pill">↶ undo</span> (<kbd>Ctrl/⌘+Z</kbd>),
+       <span class="pill">grid</span> toggles the lines.</p>
+
+    <h2>4. Tileset</h2>
+    <p><span class="pill">+ tile</span> / <span class="pill">duplicate</span> /
+       <span class="pill">delete</span> manage the bank; tap a thumbnail to select.</p>
+
+    <h2>5. Arrange</h2>
+    <p>Switch <span class="pill">draw</span> → <span class="pill">arrange</span> above the canvas (size
+       it with the <span class="pill">map</span> box). The selected tile is the stamp:
+       <span class="tag">place</span> lays it down, <span class="tag">erase</span> clears a cell,
+       <span class="pill">clear</span>/<span class="pill">↶ undo</span> work on the grid. For a mirrored
+       tile, duplicate it and flip the copy in <span class="pill">draw</span>.</p>
+
+    <h2>6. Export</h2>
+    <ul>
+      <li><span class="tag">save</span> / <span class="tag">load</span> — your project as
+          <code>.json</code> (holds both modes). Save asks for an optional project name,
+          which becomes part of the file name and is remembered for next time.</li>
+      <li><span class="tag">6502</span> — <code>.s</code> file: <code>bg_palette</code> + CHR tile data. The file documents
+          its own format and includes each tile's pixels as comments.</li>
+      <li><span class="tag">png</span> — tiles in a row, on the backdrop.</li>
+      <li><span class="tag">map</span> — a PNG of your arranged layout.</li>
+    </ul>
+  </section>
+
+  <p style="margin-top:36px"><a class="back" href="index.html">← Back to the editor</a></p>
+</div>
+<script>
+// Tab toggle between the sprite and tile guides (deep-linkable via #sprite / #tile).
+(function () {
+  const tabs = document.getElementById("tabs");
+  function show(tab) {
+    tab = tab === "tile" ? "tile" : "sprite";
+    tabs.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
+    document.getElementById("guide-sprite").hidden = tab !== "sprite";
+    document.getElementById("guide-tile").hidden = tab !== "tile";
+    if (history.replaceState) history.replaceState(null, "", "#" + tab);
+  }
+  tabs.querySelectorAll("button").forEach(b => b.onclick = () => show(b.dataset.tab));
+  show(location.hash.replace("#", ""));
+})();
+// register the service worker so the editor works fully offline
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>

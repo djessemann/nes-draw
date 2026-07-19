@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>nesprite</title>
+<meta name="description" content="Create NES sprites and background tiles in your browser — a pixel-art editor with the real NES palette, animation frames, tile arranging, and 6502/PNG export.">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#000000">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="nesprite">
+<meta property="og:title" content="nesprite — NES graphics maker">
+<meta property="og:description" content="Make NES sprites and background tiles in your browser.">
+<meta property="og:url" content="https://djessemann.github.io/nesprite/">
+<meta property="og:image" content="https://djessemann.github.io/nesprite/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="nesprite — NES graphics maker">
+<meta name="twitter:description" content="Make NES sprites and background tiles in your browser.">
+<meta name="twitter:image" content="https://djessemann.github.io/nesprite/og.png">
+<style>
+  :root {
+    --bg: #000000; --ink: #ffffff; --line: #ffffff; --muted: #999999; --soft: #666666;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  .app { max-width: 640px; margin: 0 auto; padding: 0 12px 48px; }
+
+  header {
+    position: sticky; top: 0; z-index: 10; background: var(--bg);
+    display: flex; align-items: center; gap: 10px; padding: 14px 2px 12px;
+    border-bottom: 1px solid var(--line); margin-bottom: 14px;
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 700; letter-spacing: .5px; }
+  .hdr-actions { margin-left: auto; display: flex; gap: 8px; }
+  .howto-link { color: var(--ink); background: var(--bg); text-decoration: none; font-size: 12px;
+                border: 1px solid var(--line); padding: 7px 11px; cursor: pointer; }
+
+  h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted);
+       margin: 18px 0 8px; font-weight: 700; }
+
+  button, select, input {
+    font: inherit; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 0; padding: 9px 11px; cursor: pointer;
+  }
+  button:active { background: #222; }
+  button.on { background: var(--ink); color: #000; border-color: var(--ink); font-weight: 700; }
+  input[type=number] { width: 54px; text-align: center; }
+  #pxStat { display: inline-block; width: 54px; text-align: left; }
+  #playBtn { width: 92px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+  #playBtn svg { width: 14px; height: 14px; display: block; }
+
+  /* Canvas */
+  .stage { display: flex; justify-content: center; padding: 8px 0;
+    background: repeating-conic-gradient(#fff 0% 25%, #efefef 0% 50%) 50% / 22px 22px;
+    border: 1px solid var(--line); touch-action: none; }
+  canvas#canvas { image-rendering: pixelated; touch-action: none; display: block; }
+
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .grid4.two { grid-template-columns: repeat(2, 1fr); } /* arrange: just clear + undo */
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+
+  /* Tools */
+  .tools { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .tools.two { grid-template-columns: repeat(2, 1fr); } /* arrange: only place + erase */
+  .tools button { display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 11px 4px; font-size: 12px; }
+  .tools button .ico { font-size: 20px; }
+  .tools button .ico svg { width: 22px; height: 22px; display: block; }
+
+  /* Sub-palette */
+  .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .slot { height: 48px; border: 1px solid var(--line); position: relative;
+          display: flex; align-items: flex-end; justify-content: center; cursor: pointer; }
+  .slot.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--ink); }
+  .slot .idx { position: absolute; top: 3px; left: 5px; font-size: 11px; font-weight: 800; color: #000;
+               background: rgba(255,255,255,.7); padding: 0 2px; }
+  .slot .hex { font-size: 10px; padding: 1px 4px; background: rgba(255,255,255,.85); color: #000;
+               margin-bottom: 4px; border: 1px solid var(--soft); }
+  .checker { background-image:
+      linear-gradient(45deg,#ddd 25%,transparent 25%), linear-gradient(-45deg,#ddd 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#ddd 75%), linear-gradient(-45deg,transparent 75%,#ddd 75%);
+      background-size: 14px 14px; background-position: 0 0,0 7px,7px -7px,-7px 0; background-color:#fff; }
+
+  /* NES palette */
+  .nes-pal { display: grid; grid-template-columns: repeat(13, 1fr); gap: 3px; margin-top: 12px; }
+  .nes-pal .c { aspect-ratio: 1; cursor: pointer; border: 1px solid var(--soft); }
+  .nes-pal .c.sel { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink); }
+
+  /* Frames */
+  .frames { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .frame { flex: 0 0 auto; border: 1px solid var(--line); background: var(--bg);
+           padding: 5px; cursor: pointer; text-align: center; }
+  .frame.on { box-shadow: 0 0 0 2px var(--ink); }
+  .frame canvas { width: 56px; height: 56px; display: block;
+      background: repeating-conic-gradient(#fff 0% 25%, #efefef 0% 50%) 50% / 10px 10px; }
+  .frame small { color: var(--muted); font-size: 10px; }
+
+  .preview-wrap { display: flex; align-items: center; gap: 14px; }
+  .preview-wrap canvas { width: 80px; height: 80px; image-rendering: pixelated; border: 1px solid var(--line);
+      background: repeating-conic-gradient(#fff 0% 25%, #efefef 0% 50%) 50% / 10px 10px; }
+
+  label.tog { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; color: var(--muted); }
+  label.tog input[type=checkbox] {
+    appearance: none; -webkit-appearance: none; width: 18px; height: 18px; margin: 0; padding: 0;
+    border: 1px solid var(--line); background: var(--bg); border-radius: 0; position: relative; cursor: pointer; flex: none; }
+  label.tog input[type=checkbox]:checked { background: var(--ink); }
+  label.tog input[type=checkbox]:checked::after {
+    content: ""; position: absolute; left: 5px; top: 1px; width: 4px; height: 9px;
+    border: solid #000; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .stat { color: var(--muted); font-size: 12px; }
+  .sectionbox { background: var(--bg); border: 1px solid var(--line); padding: 12px; margin-top: 10px; }
+
+  /* sprite/tile + draw/arrange segmented toggles — same 1px borders + inverted active as the app */
+  .modeseg, .viewseg { display: inline-flex; }
+  .modeseg button, .viewseg button { border-radius: 0; }
+  .modeseg button + button, .viewseg button + button { border-left-width: 0; }
+  .modeseg button { font-size: 12px; padding: 7px 14px; letter-spacing: .5px; }
+  .viewseg button { font-size: 13px; padding: 8px 16px; letter-spacing: .5px; }
+  .subrow { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .subrow .mapsize { color: var(--muted); font-size: 12px; margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .subrow .mapsize input { width: 46px; }
+  .slots.four { grid-template-columns: repeat(4, 1fr); }
+  .slot .tag { position: absolute; top: 3px; right: 5px; font-size: 9px; font-weight: 800; color: #000;
+               background: rgba(255,255,255,.7); padding: 0 3px; letter-spacing: .5px; }
+
+  /* In-app modal (confirm) — matches the dark, high-contrast, square UI */
+  .modal-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.72);
+    display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .modal-overlay[hidden] { display: none; }
+  .modal { background: var(--bg); border: 1px solid var(--line); width: 100%; max-width: 360px; padding: 18px; }
+  .modal-msg { margin: 0 0 16px; color: var(--ink); line-height: 1.5; }
+  .modal-input { display: block; width: 100%; box-sizing: border-box; margin: 0 0 16px; padding: 9px 10px;
+    background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 0;
+    font-family: inherit; font-size: 16px; } /* 16px so iOS doesn't zoom on focus */
+  .modal-input::placeholder { color: var(--muted); }
+  .modal-input[hidden] { display: none; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+  .modal-actions button { font-size: 13px; padding: 9px 16px; }
+
+  /* Layout wrappers are invisible on mobile/tablet (display:contents = no effect);
+     they only become a two-column grid on desktop, where there's room for it. */
+  .layout, .left, .right { display: contents; }
+  @media (min-width: 1100px) {
+    .app { max-width: 1120px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; align-items: start; }
+    .left { display: block; position: sticky; top: 64px; }
+    .right { display: block; }
+    .right > h2:first-child { margin-top: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="modeseg" id="modeSeg">
+      <button data-mode="sprite" class="on">sprite</button>
+      <button data-mode="tile">tile</button>
+    </div>
+    <div class="hdr-actions">
+      <button id="newProject" class="howto-link">new</button>
+      <a href="how-to.html" class="howto-link">how to</a>
+    </div>
+  </header>
+
+  <div class="layout">
+  <div class="left">
+  <!-- TILE VIEW SWITCH (tile mode only): edit one tile, or arrange tiles into a grid -->
+  <div class="subrow" id="subRow" style="display:none">
+    <div class="viewseg" id="viewSeg">
+      <button data-view="draw" class="on">draw</button>
+      <button data-view="arrange">arrange</button>
+    </div>
+    <span class="mapsize" id="mapSize" style="display:none">map
+      <input type="number" id="mapW" min="1" max="32" value="8"> ×
+      <input type="number" id="mapH" min="1" max="32" value="8">
+    </span>
+  </div>
+  <!-- CANVAS -->
+  <div class="stage" id="stage"><canvas id="canvas"></canvas></div>
+  <div class="row" style="justify-content:flex-end;margin-top:6px">
+    <label class="tog"><input type="checkbox" id="gridChk" checked> grid</label>
+  </div>
+  </div>
+
+  <div class="right">
+  <!-- TOOLS -->
+  <h2>Tools</h2>
+  <div class="tools">
+    <button class="tool on" data-tool="pencil"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/><path d="m14.5 5.5 3 3"/></svg></span>pencil</button>
+    <button class="tool" data-tool="eraser"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 20-3.7-3.7a2 2 0 0 1 0-2.8l8.4-8.4a2 2 0 0 1 2.8 0l4.9 4.9a2 2 0 0 1 0 2.8L13 20Z"/><path d="M20 20H8"/><path d="m6 13 5 5"/></svg></span>eraser</button>
+    <button class="tool" data-tool="fill"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11 4 7.5 7.5-6.6 6.6a2 2 0 0 1-2.8 0l-4.7-4.7a2 2 0 0 1 0-2.8Z"/><path d="m8 7 3 3"/><path d="M4.4 13.5h13.2"/><path d="M20.5 20a1.6 1.6 0 0 1-3.2 0c0-1.3 1.6-3.2 1.6-3.2s1.6 1.9 1.6 3.2Z"/></svg></span>fill</button>
+    <button class="tool" data-tool="lasso"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="9" rx="8.5" ry="5.5" stroke-dasharray="0.1 3.4"/><path d="M6.7 13.6c-1.5 1.3-1.4 3.4.5 4.2"/><circle cx="8.4" cy="19.4" r="1.6"/></svg></span>lasso</button>
+  </div>
+  <div class="grid4" id="editRow" style="margin-top:8px">
+    <button id="flipH">↔ flip</button>
+    <button id="flipV">↕ flip</button>
+    <button id="clearFrame">clear</button>
+    <button id="undoBtn">↶ undo</button>
+  </div>
+
+  <!-- COLORS -->
+  <h2 id="colorsHead">Colors</h2>
+  <div class="slots" id="slots"></div>
+  <div class="nes-pal" id="nesPal"></div>
+
+  <!-- FRAMES -->
+  <h2 id="framesHead">Frames &amp; animation</h2>
+  <div class="preview-wrap" id="previewWrap">
+    <canvas id="preview"></canvas>
+    <div class="row">
+      <button id="playBtn"></button>
+      <label class="stat">fps <input type="number" id="fps" min="1" max="60" value="8"></label>
+    </div>
+  </div>
+  <div class="frames" id="frames" style="margin-top:10px"></div>
+  <div class="grid4" style="margin-top:8px;grid-template-columns:repeat(3,1fr)">
+    <button id="addFrame">+ add</button>
+    <button id="dupFrame">duplicate</button>
+    <button id="delFrame">delete</button>
+  </div>
+
+  <!-- SIZE + EXPORT -->
+  <div class="sectionbox">
+    <div class="row">
+      <span>size:</span>
+      <input type="number" id="tilesW" min="1" max="8" value="2"> ×
+      <input type="number" id="tilesH" min="1" max="8" value="2">
+      <span class="stat" id="pxStat">16×16</span>
+      <button id="applySize">resize</button>
+    </div>
+  </div>
+  <div class="grid2" style="margin-top:10px">
+    <button id="saveJson">save</button>
+    <button id="loadJson">load</button>
+  </div>
+  <div class="grid3" style="margin-top:8px">
+    <button id="exportAsm">6502</button>
+    <button id="exportPng">png</button>
+    <button id="exportGif">gif</button>
+    <button id="exportMap" style="display:none">map</button>
+  </div>
+  <input type="file" id="fileInput" accept=".json" style="display:none">
+  </div>
+  </div>
+</div>
+
+<!-- In-app confirm dialog (replaces the native confirm), styled like the rest of the UI -->
+<div class="modal-overlay" id="modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalMsg">
+    <p class="modal-msg" id="modalMsg"></p>
+    <input class="modal-input" id="modalInput" type="text" maxlength="40" autocomplete="off" autocapitalize="off" spellcheck="false" hidden>
+    <div class="modal-actions">
+      <button id="modalCancel" class="howto-link">cancel</button>
+      <button id="modalOk" class="howto-link on">ok</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* nesprite — single-file, offline, mobile-friendly NES sprite editor. Format "nes-sprite-editor-v1". */
+
+const NES_PALETTE = [
+  "#7C7C7C","#0000FC","#0000BC","#4428BC","#940084","#A80020","#A81000","#881400",
+  "#503000","#007800","#006800","#005800","#004058","#000000","#000000","#000000",
+  "#BCBCBC","#0078F8","#0058F8","#6844FC","#D800CC","#E40058","#F83800","#E45C10",
+  "#AC7C00","#00B800","#00A800","#00A844","#008888","#000000","#000000","#000000",
+  "#F8F8F8","#3CBCFC","#6888FC","#9878F8","#F878F8","#F85898","#F87858","#FCA044",
+  "#F8B800","#B8F818","#58D854","#58F898","#00E8D8","#787878","#000000","#000000",
+  "#FCFCFC","#A4E4FC","#B8B8F8","#D8B8F8","#F8B8F8","#F8A4C0","#F0D0B0","#FCE0A8",
+  "#F8D878","#D8F878","#B8F8B8","#B8F8D8","#00FCFC","#F8D8F8","#000000","#000000"
+];
+
+const state = {
+  tilesW: 2, tilesH: 2,
+  palette: [0x0F, 0x16, 0x2A, 0x30],
+  frames: [], current: 0,
+  activeSlot: 1, tool: "pencil",
+  cell: 20, showGrid: true, fps: 8,
+  undo: [],
+  // sprite vs background tile mode (see CLAUDE.md). tileView: edit one tile ("draw")
+  // or stamp tiles into a grid to preview them together ("arrange").
+  mode: "sprite", tileView: "draw",
+  map: { w: 8, h: 8, cells: [] }, // arrange grid: each cell is a tile (frame) index, -1 = empty/backdrop
+  // sprite art and tile art are independent workspaces. The active one lives in the fields above;
+  // the inactive one is stashed here and swapped in on mode toggle. Both are saved to the project.
+  docs: { sprite: null, tile: null },
+};
+// Arrange just places/erases tiles; flipping is done in tile-draw mode (mirrors the real pixels).
+// A few saves briefly packed flip bits into cells — mask them off so the tile index still resolves.
+const cellTile = v => v & 0x3FFF;
+const W = () => state.tilesW * 8;
+const H = () => state.tilesH * 8;
+const isTile = () => state.mode === "tile";
+const isArrange = () => isTile() && state.tileView === "arrange";
+const backdropColor = () => NES_PALETTE[state.palette[0]]; // slot 0 = drawn backdrop in tile mode
+const logW = () => isArrange() ? state.map.w * W() : W();
+const logH = () => isArrange() ? state.map.h * H() : H();
+function resizeMap(nw, nh, reset) {
+  const oc = state.map.cells || [], ow = state.map.w, oh = state.map.h, nc = new Array(nw * nh).fill(-1);
+  if (!reset) for (let y = 0; y < Math.min(nh, oh); y++) for (let x = 0; x < Math.min(nw, ow); x++) { const v = oc[y * ow + x]; if (v != null) nc[y * nw + x] = v; }
+  state.map = { w: nw, h: nh, cells: nc };
+}
+function ensureMap() { if (!state.map.cells || state.map.cells.length !== state.map.w * state.map.h) resizeMap(state.map.w, state.map.h, false); }
+// keep arrange-grid tile references valid when the tileset changes
+function remapInsert(p) { const c = state.map.cells; if (!c) return; for (let i = 0; i < c.length; i++) { if (c[i] < 0) continue; const t = cellTile(c[i]); c[i] = t >= p ? t + 1 : t; } }
+function remapDelete(d) { const c = state.map.cells; if (!c) return; for (let i = 0; i < c.length; i++) { if (c[i] < 0) continue; const t = cellTile(c[i]); c[i] = t === d ? -1 : (t > d ? t - 1 : t); } }
+function blankFrame(name) { return { name, px: new Uint8Array(W() * H()) }; }
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const preview = document.getElementById("preview");
+const pctx = preview.getContext("2d");
+
+// ---- Sizing: auto-fit canvas to the column width ----
+function fitCanvas() {
+  const stage = canvas.parentElement;
+  const avail = stage.clientWidth - 16; // minus stage padding
+  let cell = Math.floor(avail / logW());
+  cell = Math.max(1, Math.min(cell, 48));
+  state.cell = cell;
+  render();
+}
+window.addEventListener("resize", fitCanvas);
+
+// ---- Rendering ----
+function drawChecker(c, w, h, size) {
+  for (let y = 0; y < h; y += size)
+    for (let x = 0; x < w; x += size) {
+      c.fillStyle = ((x / size + y / size) & 1) ? "#eaeaea" : "#ffffff";
+      c.fillRect(x, y, size, size);
+    }
+}
+function paintPixels(c, px, w, h, z, ox = 0, oy = 0) {
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const v = px[y * w + x];
+      if (v === 0) continue;
+      c.fillStyle = NES_PALETTE[state.palette[v]];
+      c.fillRect(ox + x * z, oy + y * z, z, z);
+    }
+}
+// ---- Lasso selection (freeform select + move) ----
+let sel = null;    // floating selection: { cells:[{x,y,v}], dx, dy } — frame px has these source cells cleared
+let lasso = null;  // active gesture: { mode:"trace", path:[...] } | { mode:"move", start:{x,y} }
+function frameDisplayPx(i) { // frame pixels with the floating selection composited in (current frame only)
+  const base = state.frames[i].px;
+  if (!sel || i !== state.current) return base;
+  const w = W(), h = H(), px = new Uint8Array(base);
+  for (const c of sel.cells) { const x = c.x + sel.dx, y = c.y + sel.dy; if (x >= 0 && y >= 0 && x < w && y < h) px[y * w + x] = c.v; }
+  return px;
+}
+function commitSelection() { // stamp the floating pixels into the frame and clear the selection
+  if (!sel) return;
+  const w = W(), h = H(), px = state.frames[state.current].px;
+  for (const c of sel.cells) { const x = c.x + sel.dx, y = c.y + sel.dy; if (x >= 0 && y >= 0 && x < w && y < h) px[y * w + x] = c.v; }
+  sel = null;
+}
+function selBBox() {
+  let a = 1e9, b = 1e9, c = -1e9, d = -1e9;
+  for (const p of sel.cells) { const x = p.x + sel.dx, y = p.y + sel.dy; a = Math.min(a, x); b = Math.min(b, y); c = Math.max(c, x); d = Math.max(d, y); }
+  return { minx: a, miny: b, maxx: c, maxy: d };
+}
+function inSel(cell) { if (!sel) return false; const b = selBBox(); return cell.x >= b.minx && cell.x <= b.maxx && cell.y >= b.miny && cell.y <= b.maxy; }
+function pointInPoly(px, py, v) { // ray-cast point-in-polygon
+  let inside = false;
+  for (let i = 0, j = v.length - 1; i < v.length; j = i++) {
+    const xi = v[i].x, yi = v[i].y, xj = v[j].x, yj = v[j].y;
+    if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+function finalizeLasso(path) { // lift the non-transparent pixels inside the traced outline
+  let minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9;
+  for (const p of path) { minx = Math.min(minx, p.x); miny = Math.min(miny, p.y); maxx = Math.max(maxx, p.x); maxy = Math.max(maxy, p.y); }
+  const w = W(), px = state.frames[state.current].px;
+  const verts = path.map(p => ({ x: p.x + 0.5, y: p.y + 0.5 })), onPath = new Set(path.map(p => p.y * w + p.x)), picked = [];
+  pushUndo();
+  for (let y = miny; y <= maxy; y++) for (let x = minx; x <= maxx; x++) {
+    if (onPath.has(y * w + x) || pointInPoly(x + 0.5, y + 0.5, verts)) {
+      const i = y * w + x; if (px[i] !== 0) { picked.push({ x, y, v: px[i] }); px[i] = 0; }
+    }
+  }
+  if (!picked.length) state.undo.pop(); else sel = { cells: picked, dx: 0, dy: 0 };
+}
+function lassoDown(cell) {
+  if (sel && inSel(cell)) lasso = { mode: "move", start: cell };
+  else { commitSelection(); lasso = { mode: "trace", path: [cell] }; }
+  render();
+}
+function lassoMove(cell) {
+  if (!lasso) return;
+  if (lasso.mode === "trace") { const p = lasso.path[lasso.path.length - 1]; if (p.x !== cell.x || p.y !== cell.y) lasso.path.push(cell); }
+  else { sel.dx = cell.x - lasso.start.x; sel.dy = cell.y - lasso.start.y; }
+  render(); renderPreview();
+}
+function lassoUp() {
+  if (!lasso) return;
+  if (lasso.mode === "trace") finalizeLasso(lasso.path);
+  else { sel.cells = sel.cells.map(c => ({ x: c.x + sel.dx, y: c.y + sel.dy, v: c.v })); sel.dx = 0; sel.dy = 0; }
+  lasso = null; render(); renderPreview(); renderFrames();
+}
+// Grid lines adapt to the canvas background so they stay visible on a dark backdrop too:
+// dark lines on a light surface (sprite checker / light backdrop), light lines on a dark backdrop.
+function gridColors() {
+  let dark = false;
+  if (isTile()) { const [r, g, b] = hexToRgb(backdropColor()); dark = (0.299 * r + 0.587 * g + 0.114 * b) < 128; }
+  return dark
+    ? { fine: "rgba(255,255,255,.18)", bound: "rgba(255,255,255,.55)" }
+    : { fine: "rgba(0,0,0,.10)", bound: "rgba(0,0,0,.5)" };
+}
+function render() {
+  if (isArrange()) return renderArrangeCanvas();
+  const w = W(), h = H(), z = state.cell;
+  canvas.width = w * z; canvas.height = h * z;
+  ctx.imageSmoothingEnabled = false;
+  if (isTile()) { ctx.fillStyle = backdropColor(); ctx.fillRect(0, 0, canvas.width, canvas.height); } // color 0 is the drawn backdrop
+  else drawChecker(ctx, canvas.width, canvas.height, Math.max(8, z / 2));
+  paintPixels(ctx, frameDisplayPx(state.current), w, h, z);
+  if (state.showGrid) {
+    const gc = gridColors();
+    ctx.lineWidth = 1; ctx.strokeStyle = gc.fine; ctx.beginPath();
+    for (let x = 0; x <= w; x++) { ctx.moveTo(x * z + .5, 0); ctx.lineTo(x * z + .5, h * z); }
+    for (let y = 0; y <= h; y++) { ctx.moveTo(0, y * z + .5); ctx.lineTo(w * z, y * z + .5); }
+    ctx.stroke();
+    ctx.lineWidth = 2; ctx.strokeStyle = gc.bound; ctx.beginPath();
+    for (let x = 0; x <= w; x += 8) { ctx.moveTo(x * z, 0); ctx.lineTo(x * z, h * z); }
+    for (let y = 0; y <= h; y += 8) { ctx.moveTo(0, y * z); ctx.lineTo(w * z, y * z); }
+    ctx.stroke();
+  }
+  if (lasso && lasso.mode === "trace" && lasso.path.length) { // in-progress lasso outline
+    ctx.save(); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.beginPath();
+    lasso.path.forEach((p, i) => { const X = (p.x + 0.5) * z, Y = (p.y + 0.5) * z; i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+    ctx.stroke(); ctx.restore();
+  }
+  if (sel) { // marquee around the floating selection
+    const b = selBBox();
+    ctx.save(); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
+    ctx.strokeRect(b.minx * z + 1, b.miny * z + 1, (b.maxx - b.minx + 1) * z - 2, (b.maxy - b.miny + 1) * z - 2);
+    ctx.restore();
+  }
+  scheduleSave();
+}
+// Arrange view: stamp the tileset (frames) into a grid to preview tiles together.
+function renderArrangeCanvas() {
+  ensureMap();
+  const tw = W(), th = H(), z = state.cell, mw = state.map.w, mh = state.map.h;
+  canvas.width = mw * tw * z; canvas.height = mh * th * z;
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = backdropColor(); ctx.fillRect(0, 0, canvas.width, canvas.height);
+  for (let cy = 0; cy < mh; cy++) for (let cx = 0; cx < mw; cx++) {
+    const cell = state.map.cells[cy * mw + cx]; if (cell < 0) continue;
+    const fi = cellTile(cell);
+    if (fi < state.frames.length) paintPixels(ctx, state.frames[fi].px, tw, th, z, cx * tw * z, cy * th * z);
+  }
+  if (state.showGrid) {
+    const gc = gridColors();
+    ctx.lineWidth = 1; ctx.strokeStyle = gc.fine; ctx.beginPath();
+    for (let x = 0; x <= mw * tw; x++) { ctx.moveTo(x * z + .5, 0); ctx.lineTo(x * z + .5, mh * th * z); }
+    for (let y = 0; y <= mh * th; y++) { ctx.moveTo(0, y * z + .5); ctx.lineTo(mw * tw * z, y * z + .5); }
+    ctx.stroke();
+    ctx.lineWidth = 2; ctx.strokeStyle = gc.bound; ctx.beginPath(); // tile-cell boundaries
+    for (let cx = 0; cx <= mw; cx++) { ctx.moveTo(cx * tw * z, 0); ctx.lineTo(cx * tw * z, mh * th * z); }
+    for (let cy = 0; cy <= mh; cy++) { ctx.moveTo(0, cy * th * z); ctx.lineTo(mw * tw * z, cy * th * z); }
+    ctx.stroke();
+  }
+  scheduleSave();
+}
+let previewFrame = 0;
+function renderPreview() {
+  const w = W(), h = H(), z = Math.max(1, Math.floor(80 / Math.max(w, h)));
+  preview.width = w * z; preview.height = h * z;
+  pctx.imageSmoothingEnabled = false; pctx.clearRect(0, 0, preview.width, preview.height);
+  if (isTile()) { pctx.fillStyle = backdropColor(); pctx.fillRect(0, 0, preview.width, preview.height); }
+  paintPixels(pctx, frameDisplayPx(previewFrame), w, h, z);
+}
+function renderFrameThumb(cnv, i) {
+  const w = W(), h = H(), z = Math.max(1, Math.floor(56 / Math.max(w, h)));
+  cnv.width = w * z; cnv.height = h * z;
+  const c = cnv.getContext("2d"); c.imageSmoothingEnabled = false;
+  if (isTile()) { c.fillStyle = backdropColor(); c.fillRect(0, 0, cnv.width, cnv.height); }
+  paintPixels(c, frameDisplayPx(i), w, h, z);
+}
+
+// ---- Sub-palette UI ----
+// Opaque slots that share slot 0's color read as backdrop/transparency on screen but are
+// NOT transparent in hardware (e.g. color 3 = $0F black on a black backdrop). Noted in the
+// exported .s file only — no in-app warning (owner's choice).
+function paletteClashes() {
+  const out = [];
+  for (let i = 1; i < 4; i++) if (NES_PALETTE[state.palette[i]] === NES_PALETTE[state.palette[0]]) out.push(i);
+  return out;
+}
+function renderSlots() {
+  const el = document.getElementById("slots"); el.innerHTML = "";
+  el.classList.toggle("four", isTile());
+  state.palette.forEach((nesIdx, i) => {
+    if (i === 0 && !isTile()) return; // sprite: slot 0 is transparency (the eraser). tile: it's the paintable backdrop
+    const d = document.createElement("div");
+    d.className = "slot" + (state.activeSlot === i ? " on" : "");
+    d.style.background = NES_PALETTE[nesIdx];
+    d.innerHTML = `<span class="idx">${i}</span>` +
+      (i === 0 ? `<span class="tag">bg</span>` : ``) +
+      `<span class="hex">$${nesIdx.toString(16).toUpperCase().padStart(2, "0")}</span>`;
+    d.onclick = () => { state.activeSlot = i; renderSlots(); renderNesPal(); };
+    el.appendChild(d);
+  });
+}
+// Clean 13x4 picker: a grayscale column (black -> white) + the 12 hues, each a
+// 4-shade column (dark -> pale). Drops the ~10 duplicate blacks and a couple of
+// near-duplicate grays for a clearer palette. Values are NES master-palette indices.
+const GRAY_COL = [0x0F, 0x00, 0x10, 0x30]; // black, dark gray, light gray, white (one per row)
+function paletteOrder() {
+  const out = [];
+  for (let r = 0; r < 4; r++) {
+    out.push(GRAY_COL[r]);
+    for (let h = 1; h <= 12; h++) out.push(r * 16 + h);
+  }
+  return out;
+}
+function renderNesPal() {
+  const el = document.getElementById("nesPal"); el.innerHTML = "";
+  paletteOrder().forEach(idx => {
+    const c = document.createElement("div");
+    c.className = "c" + (state.palette[state.activeSlot] === idx ? " sel" : "");
+    c.style.background = NES_PALETTE[idx];
+    c.title = "$" + idx.toString(16).toUpperCase().padStart(2, "0");
+    c.onclick = () => { state.palette[state.activeSlot] = idx; renderSlots(); renderNesPal(); render(); renderPreview(); renderFrames(); };
+    el.appendChild(c);
+  });
+}
+
+// ---- Frames UI ----
+function renderFrames() {
+  const el = document.getElementById("frames"); el.innerHTML = "";
+  state.frames.forEach((f, i) => {
+    const d = document.createElement("div");
+    d.className = "frame" + (state.current === i ? " on" : "");
+    const cnv = document.createElement("canvas"); renderFrameThumb(cnv, i);
+    const lbl = document.createElement("small"); lbl.textContent = "#" + i;
+    d.appendChild(cnv); d.appendChild(lbl);
+    d.onclick = () => { commitSelection(); state.current = i; previewFrame = i; render(); renderFrames(); renderPreview(); };
+    el.appendChild(d);
+  });
+}
+
+// ---- Drawing (mouse + touch) ----
+let drawing = false, lastCell = null;
+function cellFromPoint(clientX, clientY) {
+  const r = canvas.getBoundingClientRect();
+  const x = Math.floor((clientX - r.left) / state.cell);
+  const y = Math.floor((clientY - r.top) / state.cell);
+  if (x < 0 || y < 0 || x >= W() || y >= H()) return null;
+  return { x, y };
+}
+function setPixel(x, y, v) { state.frames[state.current].px[y * W() + x] = v; }
+function getPixel(x, y) { return state.frames[state.current].px[y * W() + x]; }
+function pushUndo() {
+  state.undo.push({ i: state.current, px: new Uint8Array(state.frames[state.current].px) });
+  if (state.undo.length > 40) state.undo.shift();
+}
+function plotLine(a, b, v) {
+  let x0 = a.x, y0 = a.y; const x1 = b.x, y1 = b.y;
+  const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1; let err = dx + dy;
+  while (true) {
+    setPixel(x0, y0, v);
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
+  }
+}
+function floodFill(x, y, target) {
+  const w = W(), h = H(), from = getPixel(x, y);
+  if (from === target) return;
+  const stack = [[x, y]];
+  while (stack.length) {
+    const [cx, cy] = stack.pop();
+    if (cx < 0 || cy < 0 || cx >= w || cy >= h || getPixel(cx, cy) !== from) continue;
+    setPixel(cx, cy, target);
+    stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
+  }
+}
+function applyTool(cell, isStart) {
+  const v = state.activeSlot;
+  if (state.tool === "pencil") { if (lastCell && !isStart) plotLine(lastCell, cell, v); else setPixel(cell.x, cell.y, v); }
+  else if (state.tool === "eraser") { if (lastCell && !isStart) plotLine(lastCell, cell, 0); else setPixel(cell.x, cell.y, 0); }
+  else if (state.tool === "fill") { floodFill(cell.x, cell.y, v); }
+  lastCell = cell; render(); renderPreview();
+}
+function startDraw(cell) {
+  pushUndo();
+  drawing = true; lastCell = null; applyTool(cell, true);
+  if (state.tool === "fill") { drawing = false; renderFrames(); }
+}
+function pointerDown(c) { if (state.tool === "lasso") lassoDown(c); else startDraw(c); }
+function pointerMove(c) { if (state.tool === "lasso") { if (lasso) lassoMove(c); } else if (drawing) applyTool(c, false); }
+function pointerUp() { if (state.tool === "lasso") { if (lasso) lassoUp(); } else if (drawing) { drawing = false; renderFrames(); } }
+
+// ---- Arrange: stamp tiles into the grid ----
+let mapDrawing = false, mapUndo = [];
+function pushMapUndo() { mapUndo.push(state.map.cells.slice()); if (mapUndo.length > 40) mapUndo.shift(); }
+function mapCellFromPoint(clientX, clientY) {
+  const r = canvas.getBoundingClientRect(), tw = W() * state.cell, th = H() * state.cell;
+  const cx = Math.floor((clientX - r.left) / tw), cy = Math.floor((clientY - r.top) / th);
+  if (cx < 0 || cy < 0 || cx >= state.map.w || cy >= state.map.h) return null;
+  return { cx, cy };
+}
+function mapStamp(cell) {
+  const i = cell.cy * state.map.w + cell.cx;
+  const v = (state.tool === "eraser") ? -1 : state.current; // place selected tile, or erase the cell
+  if (state.map.cells[i] === v) return;
+  state.map.cells[i] = v;
+  render();
+}
+// ---- Pointer routing (mode-aware) ----
+function onDown(x, y) {
+  if (isArrange()) { if (state.tool === "lasso") return; const c = mapCellFromPoint(x, y); if (c) { pushMapUndo(); mapDrawing = true; mapStamp(c); } return; }
+  const c = cellFromPoint(x, y); if (c) pointerDown(c);
+}
+function onMove(x, y) {
+  if (isArrange()) { if (mapDrawing) { const c = mapCellFromPoint(x, y); if (c) mapStamp(c); } return; }
+  const c = cellFromPoint(x, y); if (c) pointerMove(c);
+}
+function onUp() { if (isArrange()) { mapDrawing = false; } else pointerUp(); }
+// mouse
+canvas.addEventListener("mousedown", e => onDown(e.clientX, e.clientY));
+canvas.addEventListener("mousemove", e => onMove(e.clientX, e.clientY));
+window.addEventListener("mouseup", onUp);
+// touch
+canvas.addEventListener("touchstart", e => { e.preventDefault(); const t = e.touches[0]; onDown(t.clientX, t.clientY); }, { passive: false });
+canvas.addEventListener("touchmove", e => { e.preventDefault(); const t = e.touches[0]; onMove(t.clientX, t.clientY); }, { passive: false });
+canvas.addEventListener("touchend", e => { e.preventDefault(); onUp(); }, { passive: false });
+
+// ---- Toolbar ----
+function setTool(name) {
+  if (isArrange() && name !== "pencil" && name !== "eraser") return; // arrange only has place + erase
+  commitSelection();
+  state.tool = name;
+  document.querySelectorAll("button.tool").forEach(x => x.classList.toggle("on", x.dataset.tool === name));
+  render(); renderPreview(); renderFrames();
+}
+document.querySelectorAll("button.tool").forEach(b => { b.onclick = () => setTool(b.dataset.tool); });
+
+// ---- Sprite / tile mode + draw / arrange view ----
+const ICON_PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/><path d="m14.5 5.5 3 3"/></svg>';
+const ICON_ERASER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 20-3.7-3.7a2 2 0 0 1 0-2.8l8.4-8.4a2 2 0 0 1 2.8 0l4.9 4.9a2 2 0 0 1 0 2.8L13 20Z"/><path d="M20 20H8"/><path d="m6 13 5 5"/></svg>';
+const show = (id, on) => { document.getElementById(id).style.display = on ? "" : "none"; };
+// arrange only needs place + erase, so hide the pixel tools / color picker there
+function ensureArrangeTool() {
+  if (state.tool !== "pencil" && state.tool !== "eraser") {
+    state.tool = "pencil";
+    document.querySelectorAll("button.tool").forEach(x => x.classList.toggle("on", x.dataset.tool === "pencil"));
+  }
+}
+function syncModeUI() {
+  const tile = isTile(), arrange = isArrange();
+  document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on", b.dataset.mode === state.mode));
+  document.querySelectorAll("#viewSeg button").forEach(b => b.classList.toggle("on", b.dataset.view === state.tileView));
+  show("subRow", tile); show("mapSize", arrange);
+  document.getElementById("mapW").value = state.map.w; document.getElementById("mapH").value = state.map.h;
+  // pencil -> "place" in arrange; eraser stays the eraser everywhere ("erase" in arrange).
+  // In tile mode color 0 is the backdrop, so erasing simply paints the backdrop.
+  document.querySelector('button[data-tool="pencil"]').innerHTML = '<span class="ico">' + ICON_PENCIL + '</span>' + (arrange ? "place" : "pencil");
+  document.querySelector('button[data-tool="eraser"]').innerHTML = '<span class="ico">' + ICON_ERASER + '</span>' + (arrange ? "erase" : "eraser");
+  document.querySelector('button[data-tool="fill"]').style.display = arrange ? "none" : "";
+  document.querySelector('button[data-tool="lasso"]').style.display = arrange ? "none" : "";
+  document.querySelector(".tools").classList.toggle("two", arrange);
+  show("colorsHead", !arrange); show("slots", !arrange); show("nesPal", !arrange); // no per-pixel colors in arrange
+  // arrange has no flip (that's a tile-draw op); leaves just clear + undo
+  show("flipH", !arrange); show("flipV", !arrange);
+  document.getElementById("editRow").classList.toggle("two", arrange);
+  document.getElementById("framesHead").textContent = tile ? "Tileset" : "Frames & animation";
+  show("previewWrap", !tile);
+  document.getElementById("addFrame").textContent = tile ? "+ tile" : "+ add";
+  show("exportGif", !tile); show("exportMap", tile); // gif (animation) for sprites, map (layout) for tiles
+  document.getElementById("stage").style.background = tile ? backdropColor() : "";
+}
+// ---- Per-mode documents (sprite art vs tile art are independent) ----
+function captureDoc() { // snapshot the live workspace
+  return {
+    tilesW: state.tilesW, tilesH: state.tilesH, palette: state.palette.slice(), fps: state.fps,
+    frames: state.frames, current: state.current,
+    map: { w: state.map.w, h: state.map.h, cells: (state.map.cells || []).slice() },
+  };
+}
+function applyDoc(d) { // make a document the live workspace
+  state.tilesW = d.tilesW; state.tilesH = d.tilesH; state.palette = d.palette.slice(); state.fps = d.fps;
+  state.frames = d.frames; state.current = Math.min(d.current || 0, d.frames.length - 1); previewFrame = state.current;
+  state.map = { w: d.map.w, h: d.map.h, cells: (d.map.cells || []).slice() };
+  state.undo = []; mapUndo = [];
+  document.getElementById("tilesW").value = state.tilesW;
+  document.getElementById("tilesH").value = state.tilesH;
+  document.getElementById("fps").value = state.fps;
+  updatePxStat();
+}
+function defaultDoc(mode) { // a fresh, empty workspace for a mode (tiles default to a single 8x8)
+  const tw = mode === "tile" ? 1 : 2, th = mode === "tile" ? 1 : 2;
+  return { tilesW: tw, tilesH: th, palette: [0x0F, 0x16, 0x2A, 0x30], fps: 8,
+           frames: [{ name: "frame0", px: new Uint8Array(tw * 8 * th * 8) }], current: 0, map: { w: 8, h: 8, cells: [] } };
+}
+function refreshMode() { // sync UI + canvas to the current mode/view (no document swap)
+  if (!isTile() && state.activeSlot === 0) state.activeSlot = 1; // slot 0 isn't paintable in sprite mode
+  if (isArrange()) { ensureMap(); ensureArrangeTool(); }
+  syncModeUI();
+  renderSlots(); renderNesPal(); fitCanvas(); renderPreview(); renderFrames();
+}
+function applyMode(mode) {
+  commitSelection();
+  mode = mode === "tile" ? "tile" : "sprite";
+  if (mode !== state.mode) { // swap the inactive workspace in
+    if (playing) stopPlay();
+    state.docs[state.mode] = captureDoc();
+    const incoming = state.docs[mode] || defaultDoc(mode);
+    state.docs[mode] = null;
+    state.mode = mode; state.tileView = "draw";
+    applyDoc(incoming);
+  }
+  refreshMode();
+}
+function setView(view) {
+  commitSelection();
+  state.tileView = view === "arrange" ? "arrange" : "draw";
+  if (isArrange()) { ensureMap(); ensureArrangeTool(); }
+  syncModeUI();
+  fitCanvas();
+}
+document.querySelectorAll("#modeSeg button").forEach(b => b.onclick = () => applyMode(b.dataset.mode));
+document.querySelectorAll("#viewSeg button").forEach(b => b.onclick = () => setView(b.dataset.view));
+function applyMapSize() {
+  resizeMap(Math.max(1, Math.min(32, +document.getElementById("mapW").value || 1)),
+            Math.max(1, Math.min(32, +document.getElementById("mapH").value || 1)), false);
+  document.getElementById("mapW").value = state.map.w; document.getElementById("mapH").value = state.map.h;
+  fitCanvas();
+}
+document.getElementById("mapW").addEventListener("change", applyMapSize);
+document.getElementById("mapH").addEventListener("change", applyMapSize);
+function mutateFrame(fn) { commitSelection(); pushUndo(); fn(); render(); renderPreview(); renderFrames(); }
+// Flipping is a tile-draw / sprite operation (mirrors the actual pixels). Arrange has no flip.
+document.getElementById("flipH").onclick = () => mutateFrame(() => {
+  const w = W(), h = H(), s = state.frames[state.current].px, o = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) o[y * w + x] = s[y * w + (w - 1 - x)];
+  state.frames[state.current].px = o;
+});
+document.getElementById("flipV").onclick = () => mutateFrame(() => {
+  const w = W(), h = H(), s = state.frames[state.current].px, o = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) o[y * w + x] = s[(h - 1 - y) * w + x];
+  state.frames[state.current].px = o;
+});
+document.getElementById("clearFrame").onclick = () => {
+  if (isArrange()) { pushMapUndo(); state.map.cells.fill(-1); render(); return; }
+  mutateFrame(() => state.frames[state.current].px.fill(0));
+};
+document.getElementById("undoBtn").onclick = () => {
+  if (isArrange()) { const m = mapUndo.pop(); if (m) { state.map.cells = m; render(); } return; }
+  sel = null; // discard any floating selection
+  const u = state.undo.pop(); if (!u) return;
+  state.current = Math.min(u.i, state.frames.length - 1);
+  state.frames[state.current].px = u.px;
+  render(); renderPreview(); renderFrames();
+};
+
+document.getElementById("gridChk").onchange = e => { state.showGrid = e.target.checked; render(); };
+
+document.getElementById("applySize").onclick = () => {
+  commitSelection();
+  const nw = Math.max(1, Math.min(8, +document.getElementById("tilesW").value));
+  const nh = Math.max(1, Math.min(8, +document.getElementById("tilesH").value));
+  const ow = W(), oh = H(); state.tilesW = nw; state.tilesH = nh; const w = W(), h = H();
+  state.frames.forEach(f => {
+    const o = new Uint8Array(w * h);
+    for (let y = 0; y < Math.min(h, oh); y++) for (let x = 0; x < Math.min(w, ow); x++) o[y * w + x] = f.px[y * ow + x];
+    f.px = o;
+  });
+  state.undo = []; fitCanvas(); renderPreview(); renderFrames();
+};
+// Live pixel-dimension hint next to the size inputs (tiles are 8px each).
+function updatePxStat() {
+  const tw = Math.max(1, Math.min(8, +document.getElementById("tilesW").value || 1));
+  const th = Math.max(1, Math.min(8, +document.getElementById("tilesH").value || 1));
+  document.getElementById("pxStat").textContent = (tw * 8) + "×" + (th * 8);
+}
+document.getElementById("tilesW").addEventListener("input", updatePxStat);
+document.getElementById("tilesH").addEventListener("input", updatePxStat);
+
+document.getElementById("addFrame").onclick = () => { commitSelection(); state.frames.push(blankFrame("frame" + state.frames.length)); state.current = state.frames.length - 1; previewFrame = state.current; render(); renderPreview(); renderFrames(); };
+document.getElementById("dupFrame").onclick = () => { commitSelection(); const s = state.frames[state.current]; state.frames.splice(state.current + 1, 0, { name: s.name + "_copy", px: new Uint8Array(s.px) }); remapInsert(state.current + 1); state.current++; previewFrame = state.current; render(); renderPreview(); renderFrames(); };
+document.getElementById("delFrame").onclick = () => { commitSelection(); if (state.frames.length <= 1) return; state.frames.splice(state.current, 1); remapDelete(state.current); state.current = Math.max(0, state.current - 1); previewFrame = state.current; render(); renderPreview(); renderFrames(); };
+
+// ---- Playback ----
+let playing = false, playTimer = null;
+const ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M7 4.5l13 7.5-13 7.5z"/></svg>';
+const ICON_STOP = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>';
+function setPlayBtn() { document.getElementById("playBtn").innerHTML = (playing ? ICON_STOP + "stop" : ICON_PLAY + "play"); }
+document.getElementById("fps").onchange = e => { state.fps = Math.max(1, +e.target.value); if (playing) startPlay(); };
+document.getElementById("playBtn").onclick = () => playing ? stopPlay() : startPlay();
+function startPlay() {
+  commitSelection();
+  playing = true; setPlayBtn(); clearInterval(playTimer);
+  playTimer = setInterval(() => { previewFrame = (previewFrame + 1) % state.frames.length; renderPreview(); }, 1000 / state.fps);
+}
+function stopPlay() { playing = false; setPlayBtn(); clearInterval(playTimer); previewFrame = state.current; renderPreview(); }
+
+// ---- Keyboard (desktop) ----
+window.addEventListener("keydown", e => {
+  if (!document.getElementById("modal").hidden) { // modal open: Enter=ok, Esc=cancel, swallow the rest
+    if (e.key === "Enter") closeModal(true); else if (e.key === "Escape") closeModal(false);
+    return;
+  }
+  if (e.target.tagName === "INPUT") return;
+  const map = { b: "pencil", e: "eraser", g: "fill", l: "lasso" };
+  if (map[e.key]) { setTool(map[e.key]); }
+  if ("0123".includes(e.key) && (+e.key > 0 || isTile())) { state.activeSlot = +e.key; renderSlots(); renderNesPal(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === "z") { document.getElementById("undoBtn").click(); }
+});
+
+// ---- Serialization ----
+function pxToRows(px, w, h) { const r = []; for (let y = 0; y < h; y++) { let s = ""; for (let x = 0; x < w; x++) s += px[y * w + x]; r.push(s); } return r; }
+function rowsToPx(rows, w, h) { const px = new Uint8Array(w * h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) px[y * w + x] = +(rows[y] && rows[y][x] || 0); return px; }
+// Project holds both workspaces (sprite + tile) so neither mode's art bleeds into the other.
+function docToJson(d, withFps, withMap) {
+  const w = d.tilesW * 8, h = d.tilesH * 8;
+  const o = { tilesWide: d.tilesW, tilesHigh: d.tilesH, palette: d.palette.slice(),
+    frames: d.frames.map(f => ({ name: f.name, rows: pxToRows(f.px, w, h) })) };
+  if (withFps) o.fps = d.fps;
+  if (withMap) o.map = { w: d.map.w, h: d.map.h, cells: (d.map.cells || []).slice() };
+  return o;
+}
+// Optional user-chosen project name — asked in-app on save, embedded in the file name,
+// and kept in the project JSON/autosave so the next save prompt is prefilled with it.
+let projectName = "";
+// Filename-safe: spaces -> dashes, keep letters/digits/._-, no dash/dot runs or edges.
+function sanitizeName(s) { return s.trim().replace(/\s+/g, "-").replace(/[^A-Za-z0-9._-]/g, "").replace(/-{2,}/g, "-").replace(/^[-.]+|[-.]+$/g, "").slice(0, 40); }
+function buildProject() {
+  commitSelection();
+  const cur = captureDoc();
+  const sprite = state.mode === "sprite" ? cur : state.docs.sprite;
+  const tile = state.mode === "tile" ? cur : state.docs.tile;
+  const p = { format: "nes-sprite-editor-v1", mode: state.mode };
+  if (projectName) p.name = projectName;
+  if (sprite) p.sprite = docToJson(sprite, true, false);
+  if (tile) p.tile = docToJson(tile, false, true);
+  return p;
+}
+// ---- Local autosave: keep the working project across reloads/exports ----
+// A png/gif download can navigate the (installed) PWA away; without this the
+// in-memory project is lost on return. Persist it and restore it on boot.
+const LS_KEY = "nesprite-autosave";
+function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(buildProject())); } catch (e) {} }
+function loadLocal() { try { const s = localStorage.getItem(LS_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+let saveTimer = null;
+// Debounced; skip while a selection/lasso is floating so we never commit it mid-drag.
+function scheduleSave() { if (sel || lasso) return; clearTimeout(saveTimer); saveTimer = setTimeout(saveLocal, 400); }
+window.addEventListener("pagehide", saveLocal);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") saveLocal(); });
+
+// In-app dialogs styled like the UI (replace native confirm/alert/prompt). confirmModal resolves
+// true/false; promptModal shows a text input and resolves the typed string (ok) or null (cancel).
+let modalResolve = null;
+function openModal(message, okLabel, showCancel, inputValue) {
+  const ok = document.getElementById("modalOk"), input = document.getElementById("modalInput");
+  document.getElementById("modalMsg").textContent = message;
+  ok.textContent = okLabel;
+  document.getElementById("modalCancel").style.display = showCancel ? "" : "none";
+  input.hidden = inputValue === undefined;
+  document.getElementById("modal").hidden = false;
+  if (inputValue === undefined) ok.focus(); else { input.value = inputValue; input.focus(); input.select(); }
+  return new Promise(res => { modalResolve = res; });
+}
+function confirmModal(message, okLabel = "ok") { return openModal(message, okLabel, true); }
+function alertModal(message, okLabel = "ok") { return openModal(message, okLabel, false); }
+function promptModal(message, okLabel = "ok", value = "") { return openModal(message, okLabel, true, value); }
+function closeModal(val) {
+  if (!modalResolve) return;
+  const input = document.getElementById("modalInput");
+  const out = input.hidden ? val : (val ? input.value : null);
+  document.getElementById("modal").hidden = true;
+  const r = modalResolve; modalResolve = null; r(out);
+}
+document.getElementById("modalOk").onclick = () => closeModal(true);
+document.getElementById("modalCancel").onclick = () => closeModal(false);
+document.getElementById("modal").onclick = e => { if (e.target.id === "modal") closeModal(false); }; // tap backdrop = cancel
+
+document.getElementById("newProject").onclick = async () => {
+  if (!(await confirmModal("Start a new project? Anything not saved or exported will be lost.", "new"))) return;
+  if (playing) stopPlay();
+  loadProject({ mode: state.mode }); // empty -> fresh defaults for both modes
+  setPlayBtn(); saveLocal();
+};
+
+function download(filename, blob) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href); }
+// Unique, sortable export names so saves don't collide in one folder, e.g. nesprite-20260619-153012.json
+function fname(ext, tag) { const d = new Date(), p = n => String(n).padStart(2, "0"); return "nesprite-" + (tag ? tag + "-" : "") + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + "." + ext; }
+document.getElementById("saveJson").onclick = async () => {
+  const name = await promptModal("name your project", "save", projectName);
+  if (name === null) return; // cancelled
+  projectName = sanitizeName(name);
+  saveLocal(); // the name lives in the project JSON, so refresh the autosave too
+  download(fname("json", projectName), new Blob([JSON.stringify(buildProject(), null, 2)], { type: "application/json" }));
+};
+document.getElementById("loadJson").onclick = () => document.getElementById("fileInput").click();
+document.getElementById("fileInput").onchange = e => {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = () => { try { loadProject(JSON.parse(r.result)); } catch (err) { alertModal("Couldn't open that file. Make sure it's a project you saved from nesprite (a .json file), then try again."); } };
+  r.readAsText(file); e.target.value = "";
+};
+function parseDoc(o, mode) { // one workspace from saved JSON (null if absent)
+  if (!o) return null;
+  const d = defaultDoc(mode);
+  const tw = o.tilesWide || d.tilesW, th = o.tilesHigh || d.tilesH, w = tw * 8, h = th * 8;
+  let frames = (o.frames || []).map(f => ({ name: f.name || "frame", px: rowsToPx(f.rows, w, h) }));
+  if (!frames.length) frames = [{ name: "frame0", px: new Uint8Array(w * h) }];
+  return {
+    tilesW: tw, tilesH: th,
+    palette: (o.palette && o.palette.length === 4) ? o.palette.slice() : d.palette,
+    fps: o.fps || 8, frames, current: 0,
+    map: (o.map && o.map.w && o.map.h) ? { w: o.map.w, h: o.map.h, cells: (o.map.cells || []).slice() } : { w: 8, h: 8, cells: [] },
+  };
+}
+function loadProject(p) {
+  sel = null; if (playing) stopPlay();
+  projectName = typeof p.name === "string" ? sanitizeName(p.name) : "";
+  const mode = p.mode === "tile" ? "tile" : "sprite";
+  let spriteDoc, tileDoc;
+  if (p.sprite || p.tile) { // current format: two independent workspaces
+    spriteDoc = parseDoc(p.sprite, "sprite"); tileDoc = parseDoc(p.tile, "tile");
+  } else { // older single-document format: load into its mode, leave the other empty
+    const doc = parseDoc(Object.keys(p).length ? p : null, mode);
+    spriteDoc = mode === "sprite" ? doc : null; tileDoc = mode === "tile" ? doc : null;
+  }
+  state.mode = mode; state.tileView = "draw";
+  state.docs = { sprite: mode === "sprite" ? null : spriteDoc, tile: mode === "tile" ? null : tileDoc };
+  applyDoc((mode === "tile" ? tileDoc : spriteDoc) || defaultDoc(mode));
+  refreshMode();
+}
+
+// ---- CHR encode/decode + export determinism ----
+// One encoder, one decoder, one truth: chrToPx() exactly inverts frameToCHRBytes(), and
+// every export (.s bytes, png, gif) is rendered from the DECODED bytes — never straight
+// from the editor model. If the encoder is ever wrong, every output is wrong the same
+// way and the user sees it immediately; the .s file and the gif cannot diverge.
+function frameToCHRBytes(px, tw, th) {
+  const w = tw * 8, bytes = [];
+  for (let ty = 0; ty < th; ty++)
+    for (let tx = 0; tx < tw; tx++) {
+      const p0 = [], p1 = [];
+      for (let row = 0; row < 8; row++) {
+        let b0 = 0, b1 = 0;
+        for (let col = 0; col < 8; col++) { const v = px[(ty * 8 + row) * w + (tx * 8 + col)]; b0 = (b0 << 1) | (v & 1); b1 = (b1 << 1) | ((v >> 1) & 1); }
+        p0.push(b0); p1.push(b1);
+      }
+      bytes.push(...p0, ...p1);
+    }
+  return bytes;
+}
+function chrToPx(bytes, tw, th) {
+  const w = tw * 8, px = new Uint8Array(w * th * 8);
+  let o = 0;
+  for (let ty = 0; ty < th; ty++)
+    for (let tx = 0; tx < tw; tx++, o += 16)
+      for (let row = 0; row < 8; row++) {
+        const b0 = bytes[o + row], b1 = bytes[o + 8 + row];
+        for (let col = 0; col < 8; col++) {
+          const bit = 7 - col;
+          px[(ty * 8 + row) * w + (tx * 8 + col)] = ((b0 >> bit) & 1) | (((b1 >> bit) & 1) << 1);
+        }
+      }
+  return px;
+}
+// Round-trip gate: encode -> decode -> pixel-diff every frame against the editor model.
+// Returns [{bytes, px}] per frame (px = decoded), or throws naming frame/tile/row/pixel.
+function roundTripFrames(frames, tw, th) {
+  const w = tw * 8;
+  return frames.map((f, fi) => {
+    const bytes = frameToCHRBytes(f.px, tw, th);
+    const px = chrToPx(bytes, tw, th);
+    for (let i = 0; i < px.length; i++) if (px[i] !== f.px[i]) {
+      const x = i % w, y = (i / w) | 0;
+      throw new Error("frame " + fi + ", tile (" + ((x / 8) | 0) + "," + ((y / 8) | 0) + "), row " + (y % 8) +
+        ", pixel (" + x + "," + y + "): drew " + f.px[i] + " but the bytes decode to " + px[i]);
+    }
+    return { bytes, px };
+  });
+}
+function gatedFrames() { // shared by the .s/png/gif exports; any mismatch blocks the export
+  try { return roundTripFrames(state.frames, state.tilesW, state.tilesH); }
+  catch (e) { alertModal("Export blocked — the encoded bytes don't match what you drew (" + e.message + "). This is an app bug, so nothing was downloaded; please report it."); return null; }
+}
+// NES animation timing in whole 60Hz frames per animation frame — the unit a ROM can
+// actually implement. The gif export derives its delay from the same number, so a ROM
+// that advances every `ticks` NMIs matches the gif exactly.
+const ticksPerFrame = fps => Math.max(1, Math.round(60 / fps));
+
+const hx = b => "$" + b.toString(16).toUpperCase().padStart(2, "0");
+document.getElementById("exportAsm").onclick = () => {
+  commitSelection();
+  const frames = gatedFrames(); if (!frames) return;
+  const tw = state.tilesW, th = state.tilesH, tpf = tw * th, w = W(), h = H();
+  const tile = isTile(), unit = tile ? "tile" : "frame", n = state.frames.length;
+  const ticks = ticksPerFrame(state.fps);
+  let s = "; Generated by nesprite — https://djessemann.github.io/nesprite/\n";
+  s += "; " + w + "x" + h + " px per " + unit + " (" + tw + "x" + th + " tiles of 8x8), " + n + " " + unit + (n === 1 ? "" : "s") + "\n";
+  s += ";\n";
+  s += "; FORMAT — NES CHR, 2bpp planar. Each 8x8 tile is 16 bytes:\n";
+  s += ";   8 bytes plane 0 (low bit), then 8 bytes plane 1 (high bit);\n";
+  s += ";   one byte per row, top to bottom; bit 7 = leftmost pixel.\n";
+  s += ";   pixel value = (plane1 bit << 1) | plane0 bit -> 0..3, indexing the palette below.\n";
+  if (tpf > 1) {
+    s += "; TILE ORDER — row-major within each " + unit + ": " + (tw === 2 && th === 2 ? "top-left, top-right, bottom-left, bottom-right" : "left to right, then top to bottom") + ".\n";
+    s += ";   " + (tile ? "Tile" : "Frame") + " N occupies tiles N*" + tpf + "..N*" + tpf + "+" + (tpf - 1) + " relative to wherever this data is placed.\n";
+  } else {
+    s += "; TILE ORDER — one 8x8 tile per " + unit + "; " + unit + " N is tile N relative to wherever this data is placed.\n";
+  }
+  if (tile) {
+    s += "; USE — background tiles: color 0 is the drawn backdrop ($3F00), not transparency.\n";
+  } else {
+    s += "; USE — sprites: color 0 is hardware transparency (those pixels are never drawn;\n";
+    s += ";   the backdrop shows through them).\n";
+    s += "; TIMING — hold each frame for " + ticks + " frame" + (ticks === 1 ? "" : "s") + " @60Hz (~" + (Math.round(600 / ticks) / 10) + " fps):\n";
+    s += ";   advance to the next frame every " + ticks + " NMI" + (ticks === 1 ? "" : "s") + ". The exported gif uses this same timing.\n";
+  }
+  s += ";\n; PALETTE — NES master-palette color ids (hex value in the master palette, then sRGB):\n";
+  const role0 = tile
+    ? "the drawn backdrop ($3F00); the scene is filled with it"
+    : "hardware-transparent for sprites; in-engine it must equal the backdrop ($3F00)";
+  state.palette.forEach((p, i) => {
+    s += ";   slot " + i + ": " + hx(p) + " " + NES_PALETTE[p] + (i === 0 ? " — " + role0 : " — paintable") + "\n";
+  });
+  paletteClashes().forEach(i => {
+    s += "; WARNING: slot " + i + " (" + hx(state.palette[i]) + ") is the same color as slot 0 — pixels drawn\n";
+    s += ";   with it look like the backdrop but are OPAQUE, not " + (tile ? "empty" : "transparent") + ".\n";
+  });
+  s += "\n" + (tile ? "bg_palette" : "sprite_palette") + ":\n  .byte " + state.palette.map(hx).join(",") + "\n\n";
+  s += '.segment "CHARS"\n';
+  // Labels are frame0..frameN / tile0..tileN by timeline position (never internal copy
+  // names), and the ASCII pixel grids are generated from the DECODED bytes above — an
+  // embedded, offline-verifiable proof of what these bytes draw.
+  frames.forEach((fr, fi) => {
+    const base = fi * tpf;
+    s += "\n; " + unit + " " + fi + " — tiles " + (tpf === 1 ? String(base) : base + ".." + (base + tpf - 1)) + ". Pixels below are decoded back from these bytes\n";
+    s += "; (digits = palette slots" + (tile ? ", 0 = backdrop" : ", 0 = transparent") + "):\n";
+    for (let y = 0; y < h; y++) { let r = ";   "; for (let x = 0; x < w; x++) r += fr.px[y * w + x]; s += r + "\n"; }
+    s += unit + fi + ":\n";
+    for (let t = 0; t < tpf; t++) s += "  .byte " + fr.bytes.slice(t * 16, t * 16 + 16).map(hx).join(",") + "   ; tile " + (base + t) + "\n";
+  });
+  download(fname("s", projectName), new Blob([s], { type: "text/plain" }));
+};
+document.getElementById("exportPng").onclick = () => {
+  commitSelection();
+  const frames = gatedFrames(); if (!frames) return; // rendered from decoded CHR bytes
+  const w = W(), h = H(), scale = 8, gap = 1, n = frames.length;
+  const cnv = document.createElement("canvas");
+  cnv.width = n * w * scale + (n - 1) * gap * scale; cnv.height = h * scale;
+  const c = cnv.getContext("2d"); c.imageSmoothingEnabled = false;
+  if (isTile()) { c.fillStyle = backdropColor(); c.fillRect(0, 0, cnv.width, cnv.height); } // tiles draw on the backdrop, not transparent
+  frames.forEach((fr, i) => paintPixels(c, fr.px, w, h, scale, i * (w + gap) * scale, 0));
+  cnv.toBlob(b => download(fname("png"), b), "image/png");
+};
+// Tile mode: export the arranged layout (the composed scene) as a PNG.
+document.getElementById("exportMap").onclick = () => {
+  commitSelection(); ensureMap();
+  const frames = gatedFrames(); if (!frames) return; // stamp decoded tiles — same source of truth as png/.s
+  const tw = W(), th = H(), mw = state.map.w, mh = state.map.h, scale = 8;
+  const cnv = document.createElement("canvas");
+  cnv.width = mw * tw * scale; cnv.height = mh * th * scale;
+  const c = cnv.getContext("2d"); c.imageSmoothingEnabled = false;
+  c.fillStyle = backdropColor(); c.fillRect(0, 0, cnv.width, cnv.height);
+  for (let cy = 0; cy < mh; cy++) for (let cx = 0; cx < mw; cx++) {
+    const cell = state.map.cells[cy * mw + cx]; if (cell < 0) continue;
+    const fi = cellTile(cell);
+    if (fi < frames.length) paintPixels(c, frames[fi].px, tw, th, scale, cx * tw * scale, cy * th * scale);
+  }
+  cnv.toBlob(b => download(fname("png", "map"), b), "image/png");
+};
+
+// ---- Animated GIF export (dependency-free GIF89a, 4-color sub-palette, slot 0 transparent) ----
+function hexToRgb(hexv) { const s = hexv.replace("#", ""); return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16)]; }
+// GIF-variant LZW (variable-width codes, LSB-first). Returns a byte array.
+function lzwEncode(indices, minCodeSize) {
+  const clear = 1 << minCodeSize, end = clear + 1;
+  let codeSize, dict, next;
+  const reset = () => { codeSize = minCodeSize + 1; dict = new Map(); next = clear + 2; };
+  const out = []; let cur = 0, curBits = 0;
+  const emit = code => { cur |= code << curBits; curBits += codeSize; while (curBits >= 8) { out.push(cur & 0xFF); cur >>>= 8; curBits -= 8; } };
+  reset(); emit(clear);
+  let prefix = indices[0];
+  for (let i = 1; i < indices.length; i++) {
+    const k = indices[i], key = (prefix << 12) | k;
+    if (dict.has(key)) { prefix = dict.get(key); continue; }
+    emit(prefix);
+    if (next === 0xFFF) { emit(clear); reset(); }
+    else { if (next >= (1 << codeSize) && codeSize < 12) codeSize++; dict.set(key, next); next++; }
+    prefix = k;
+  }
+  emit(prefix); emit(end);
+  if (curBits > 0) out.push(cur & 0xFF);
+  return out;
+}
+document.getElementById("exportGif").onclick = () => {
+  commitSelection();
+  const frames = gatedFrames(); if (!frames) return; // rendered from decoded CHR bytes — cannot diverge from the .s export
+  const w = W(), h = H(), S = 8, gw = w * S, gh = h * S;
+  // Same 60Hz tick count the .s TIMING comment documents, converted to gif centiseconds,
+  // so a ROM advancing every `ticks` NMIs matches this gif.
+  const delay = Math.max(2, Math.round(ticksPerFrame(state.fps) * 100 / 60));
+  const b = [];
+  const push = (...a) => { for (const x of a) b.push(x & 0xFF); };
+  const word = v => push(v & 0xFF, (v >> 8) & 0xFF);
+  const str = s => { for (let i = 0; i < s.length; i++) b.push(s.charCodeAt(i)); };
+  str("GIF89a");
+  word(gw); word(gh);
+  push(0x80 | 0x10 | 0x01, 0x00, 0x00); // GCT flag + 4-entry table; bg index 0; aspect 0
+  for (let i = 0; i < 4; i++) push(...hexToRgb(NES_PALETTE[state.palette[i]])); // global color table (4 colors)
+  push(0x21, 0xFF, 0x0B); str("NETSCAPE2.0"); push(0x03, 0x01); word(0); push(0x00); // loop forever
+  frames.forEach(fr => {
+    push(0x21, 0xF9, 0x04, 0x09); word(delay); push(0x00, 0x00); // GCE: disposal=restore-to-bg, transparent index 0
+    push(0x2C); word(0); word(0); word(gw); word(gh); push(0x00); // image descriptor (no local table)
+    const idx = new Uint8Array(gw * gh);
+    for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) idx[y * gw + x] = fr.px[((y / S) | 0) * w + ((x / S) | 0)];
+    push(0x02); // LZW min code size (2 bits / 4 colors)
+    const lzw = lzwEncode(idx, 2);
+    for (let p = 0; p < lzw.length; p += 255) { const chunk = lzw.slice(p, p + 255); push(chunk.length); for (const v of chunk) push(v); }
+    push(0x00); // image data terminator
+  });
+  push(0x3B); // trailer
+  download(fname("gif"), new Blob([new Uint8Array(b)], { type: "image/gif" }));
+};
+
+// ---- Export self-tests (automated encode->decode round-trip checks, run at boot) ----
+// The synthetic art is asymmetric (so a bit- or tile-order bug can't pass by symmetry),
+// uses color 3, and includes fully transparent tiles. A known-vector check pins the bit
+// layout so the encoder and decoder can't both be wrong the same way. Runs in ~ms;
+// failures land in the console. Also callable as nespriteSelfTest() from devtools.
+function runExportSelfTests() {
+  const fails = [];
+  const t = (name, fn) => { try { fn(); } catch (e) { fails.push(name + ": " + e.message); } };
+  const art = (tw, th, seed) => { // asymmetric, all four colors, top-left tile fully transparent
+    const w = tw * 8, h = th * 8, px = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++)
+      px[y * w + x] = (x < 8 && y < 8 && tw * th > 1) ? 0 : (x * 3 + y * 5 + ((x * y + seed) % 3)) % 4;
+    return px;
+  };
+  t("known vector", () => { // row 1,2,3,0,0,3,2,1 -> plane0 $A5, plane1 $66 (bit 7 = leftmost)
+    const px = new Uint8Array(64); [1, 2, 3, 0, 0, 3, 2, 1].forEach((v, i) => px[i] = v);
+    const b = frameToCHRBytes(px, 1, 1);
+    if (b[0] !== 0xA5 || b[8] !== 0x66) throw new Error("row 0 encoded to " + hx(b[0]) + "," + hx(b[8]) + ", expected $A5,$66");
+  });
+  for (let tw = 1; tw <= 8; tw++) for (let th = 1; th <= 8; th++) // every supported size, 1-frame
+    t("round-trip " + tw + "x" + th, () => roundTripFrames([{ px: art(tw, th, tw + th * 3) }], tw, th));
+  t("multi-frame", () => roundTripFrames([0, 1, 2].map(i => ({ px: art(2, 2, i) })), 2, 2));
+  t("fully transparent", () => roundTripFrames([{ px: new Uint8Array(256) }], 2, 2));
+  if (fails.length) console.error("nesprite export self-tests FAILED:\n" + fails.join("\n"));
+  return fails.length ? fails : "all export self-tests passed";
+}
+window.nespriteSelfTest = runExportSelfTests;
+
+// ---- Boot ----
+const restored = loadLocal();
+loadProject(restored && (restored.sprite || restored.tile || (restored.frames && restored.frames.length)) ? restored : { mode: "sprite" });
+setPlayBtn();
+runExportSelfTests();
+
+// register the service worker so the editor works fully offline
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>

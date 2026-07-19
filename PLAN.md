@@ -11,6 +11,18 @@ this app inherits a nesprite convention, that's stated explicitly.
 
 ---
 
+> **Decision (2026-07-19): build as nesprite 2.0, in this repo.** Rather than a separate
+> companion app, this repo now contains a verbatim copy of nesprite (from commit `c577e94`)
+> and the map maker is built by **extending tile mode's arrange view** — same saved session,
+> same app, no file juggling between tools. The original nesprite repo stays frozen as the
+> minimal 1.0. Consequences for this plan: the UI sections below describe the *target*
+> experience, reached by evolving the existing arrange view (a `screen | world` zoom toggle,
+> screens/world model, per-tile palettes) rather than building from scratch; §8's repo layout
+> is already in place via the copy; sprite mode and tile-draw view stay untouched, and
+> single-screen arrange remains the default so the app never feels heavier than 1.0.
+
+---
+
 ## 1. Vision
 
 **"Draw a world like you'd doodle on graph paper. Get back something a real NES game can use."**
