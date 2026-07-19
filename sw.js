@@ -2,7 +2,7 @@
    The app is 100% self-contained (all HTML/CSS/JS inline, no external
    requests), so precaching this short list of files is enough to run the
    whole editor with no network. Bump CACHE when any cached file changes. */
-const CACHE = 'nes-draw-v4';
+const CACHE = 'nes-draw-v5';
 
 /* Relative paths so the same SW works at the GitHub Pages subpath
    (/nesprite/) and from a plain file/server root alike. */

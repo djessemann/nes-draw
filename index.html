@@ -160,6 +160,14 @@
     .right { display: block; }
     .right > h2:first-child { margin-top: 0; }
   }
+  /* True desktops only — 1400px clears every iPad (12.9" landscape is 1366px), so tablet
+     and phone layouts are untouched. Wider canvas column, roomier controls, tileset wraps
+     into rows instead of scrolling sideways. */
+  @media (min-width: 1400px) {
+    .app { max-width: 1460px; }
+    .layout { grid-template-columns: minmax(0, 1fr) 400px; gap: 32px; }
+    .frames { flex-wrap: wrap; }
+  }
 </style>
 </head>
 <body>
@@ -458,6 +466,7 @@ function render() {
   if (isArrange()) return renderArrangeCanvas();
   const w = W(), h = H(), z = state.cell;
   canvas.width = w * z; canvas.height = h * z;
+  canvas.style.width = ""; // draw modes always show native integer-cell pixels
   ctx.imageSmoothingEnabled = false;
   if (isTile()) { ctx.fillStyle = backdropColor(); ctx.fillRect(0, 0, canvas.width, canvas.height); } // color 0 is the drawn backdrop
   else drawChecker(ctx, canvas.width, canvas.height, Math.max(8, z / 2));
@@ -492,6 +501,10 @@ function renderArrangeCanvas() {
   ensureMap();
   const tw = W(), th = H(), z = state.cell, mw = viewW(), mh = viewH(), ox = viewOX(), oy = viewOY();
   canvas.width = mw * tw * z; canvas.height = mh * th * z;
+  // Big desktops only (1400px clears every iPad): stretch the zoomed-out world to fill the
+  // column — a pixelated upscale reads fine for an overview. Pointer math already corrects
+  // for CSS scaling. Elsewhere the canvas keeps its native (integer-cell) size.
+  canvas.style.width = (isWorld() && window.matchMedia("(min-width: 1400px)").matches) ? "100%" : "";
   ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = backdropColor(); ctx.fillRect(0, 0, canvas.width, canvas.height);
   for (let cy = 0; cy < mh; cy++) for (let cx = 0; cx < mw; cx++) {

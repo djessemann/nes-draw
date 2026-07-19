@@ -29,6 +29,11 @@
 > - **Canvas can CSS-downscale** (`max-width:100%; height:auto`) for big world views;
 >   `cellFromPoint`/`mapCellFromPoint` correct for it via `canvas.width / rect.width`. The
 >   per-pixel fine grid is skipped when `cell < 4`px.
+> - **Desktop tier at `min-width: 1400px`** (chosen because it clears every iPad — 12.9"
+>   landscape is 1366px, so tablet/phone layouts are pixel-identical): app widens to 1460px,
+>   controls column 400px, the tileset strip wraps into rows, and the zoomed-out world view
+>   CSS-upscales to fill the column (draw modes always stay native integer-cell). Keep any
+>   future desktop-only styling behind this same query.
 > - **`map` export renders the whole world** at an adaptive scale (≤8, capped near 8192px).
 > - **Format compatibility:** still `format: "nes-sprite-editor-v1"`; the tile doc's `map` now
 >   carries `worldW`/`worldH` (nesprite 1.0 ignores them and would just reset the arrange grid
