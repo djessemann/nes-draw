@@ -1,5 +1,5 @@
-# nesprite 2.0
+# nesprite draw
 
-A NES graphics maker in your browser.
+A NES graphics maker in your browser — the 2.0 line of [nesprite](https://github.com/djessemann/nesprite).
 
-**https://djessemann.github.io/nes-mapmaker/**
+**https://djessemann.github.io/nesprite-draw/**

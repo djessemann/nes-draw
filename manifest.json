@@ -1,6 +1,6 @@
 {
-  "name": "nesprite",
-  "short_name": "nesprite",
+  "name": "nesprite draw",
+  "short_name": "nesprite draw",
   "description": "Make NES graphics in your browser.",
   "start_url": "./",
   "display": "standalone",
