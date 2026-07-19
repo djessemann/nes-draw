@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>How to — nesprite</title>
+<title>How to — nes mapmaker</title>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#000000">
-<meta property="og:title" content="How to — nesprite">
-<meta property="og:description" content="How to use nesprite, the browser-based NES sprite & tile editor.">
-<meta property="og:image" content="https://djessemann.github.io/nesprite/og.png">
+<meta property="og:title" content="How to — nes mapmaker">
+<meta property="og:description" content="How to use nes mapmaker, the browser-based NES sprite, tile &amp; map editor.">
+<meta property="og:image" content="https://djessemann.github.io/nes-mapmaker/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://djessemann.github.io/nesprite/og.png">
+<meta name="twitter:image" content="https://djessemann.github.io/nes-mapmaker/og.png">
 <style>
   :root { --bg: #000000; --ink: #ffffff; --line: #ffffff; --muted: #999999; --soft: #222222; }
   * { box-sizing: border-box; }
@@ -49,11 +49,12 @@
 <div class="wrap">
   <nav><a class="back" href="index.html">← Back to the editor</a></nav>
 
-  <h1>How to use nesprite</h1>
-  <p class="lede">Make NES graphics in your browser on the real NES palette, and export to 6502
-     assembly, PNG, or GIF. The toggle at the top left of the editor switches between
-     <strong>sprite</strong> mode (moving characters, animated) and <strong>tile</strong> mode
-     (backgrounds you arrange into scenes). The two are separate workspaces and auto-save.</p>
+  <h1>How to use nes mapmaker</h1>
+  <p class="lede">Make NES graphics and game maps in your browser on the real NES palette, and
+     export to 6502 assembly, PNG, or GIF. The toggle at the top left of the editor switches
+     between <strong>sprite</strong> mode (moving characters, animated) and <strong>tile</strong>
+     mode (backgrounds you arrange into scenes and multi-screen worlds). The two are separate
+     workspaces and auto-save.</p>
 
   <div class="tabs" id="tabs">
     <button data-tab="sprite" class="on">sprite mode</button>
@@ -126,21 +127,39 @@
        <span class="pill">delete</span> manage the bank; tap a thumbnail to select.</p>
 
     <h2>5. Arrange</h2>
-    <p>Switch <span class="pill">draw</span> → <span class="pill">arrange</span> above the canvas (size
-       it with the <span class="pill">map</span> box). The selected tile is the stamp:
-       <span class="tag">place</span> lays it down, <span class="tag">erase</span> clears a cell,
-       <span class="pill">clear</span>/<span class="pill">↶ undo</span> work on the grid. For a mirrored
-       tile, duplicate it and flip the copy in <span class="pill">draw</span>.</p>
+    <p>Switch <span class="pill">draw</span> → <span class="pill">arrange</span> above the canvas.
+       The selected tile is the stamp: <span class="tag">place</span> lays it down,
+       <span class="tag">erase</span> clears a cell, <span class="pill">clear</span>/<span
+       class="pill">↶ undo</span> work on the grid. For a mirrored tile, duplicate it and flip
+       the copy in <span class="pill">draw</span>.</p>
+    <p>The <span class="pill">screen</span> box sets how big one screen is (in tiles).</p>
 
-    <h2>6. Export</h2>
+    <h2>6. Build a world</h2>
+    <p>Set the <span class="pill">world</span> box to more than <span class="pill">1 × 1</span>
+       and your map becomes a grid of screens — a Zelda-style adventure world, or a Dragon Quest
+       overworld, town, or dungeon. Then:</p>
+    <ul>
+      <li>A <span class="pill">screen</span> / <span class="pill">world</span> toggle appears.
+          <strong>screen</strong> is where you paint — one screen at a time.</li>
+      <li>Move between screens with the <span class="pill">◀ ▶ ▲ ▼</span> buttons under the
+          canvas (or the arrow keys); the number shows which screen is open.</li>
+      <li><strong>world</strong> zooms out to the whole map. Tap any screen to open it for
+          painting. Dashed lines mark the open screen.</li>
+      <li><span class="pill">clear</span> empties just the open screen; in world view it clears
+          the whole map (it asks first).</li>
+    </ul>
+
+    <h2>7. Export</h2>
     <ul>
       <li><span class="tag">save</span> / <span class="tag">load</span> — your project as
           <code>.json</code> (holds both modes). Save asks for an optional project name,
-          which becomes part of the file name and is remembered for next time.</li>
+          which becomes part of the file name and is remembered for next time. Projects saved
+          from nesprite 1.0 load here too.</li>
       <li><span class="tag">6502</span> — <code>.s</code> file: <code>bg_palette</code> + CHR tile data. The file documents
           its own format and includes each tile's pixels as comments.</li>
       <li><span class="tag">png</span> — tiles in a row, on the backdrop.</li>
-      <li><span class="tag">map</span> — a PNG of your arranged layout.</li>
+      <li><span class="tag">map</span> — a PNG of your arranged layout — the whole world,
+          every screen.</li>
     </ul>
   </section>
 

@@ -14,6 +14,34 @@
 > - **Direction:** grow tile mode's arrange view into a multi-screen map editor (Zelda-style
 >   worlds, DQ-style overworlds/towns/dungeons) with game-ready exports. The phased roadmap
 >   and design decisions live in `PLAN.md` — read it alongside this file.
+>
+> **2.0 changes shipped so far** (on top of the inherited app below):
+>
+> - **Multi-screen worlds in arrange.** `state.map` gained `worldW`/`worldH` (1..16, default 1);
+>   `w`/`h` are now *cells per screen* (1..32) and `cells` spans the whole world row-major
+>   (`totW() = w*worldW` wide). A `screen | world` segmented toggle (`state.mapView`) appears
+>   once the world is >1×1: **screen** paints one screen at a time (`state.curScreen`, moved
+>   with ◀▶▲▼ buttons / arrow keys / tapping a screen in world view), **world** zooms out to
+>   everything and is navigate-only (tools hidden; tap a screen to open it). World view draws
+>   3px screen seams + a dashed highlight on the open screen (contrast picked from backdrop
+>   luminance). `clear` clears the open screen in screen view; in world view it clears the
+>   whole map behind a `confirmModal`. A 1×1 world looks and behaves exactly like 1.0.
+> - **Canvas can CSS-downscale** (`max-width:100%; height:auto`) for big world views;
+>   `cellFromPoint`/`mapCellFromPoint` correct for it via `canvas.width / rect.width`. The
+>   per-pixel fine grid is skipped when `cell < 4`px.
+> - **`map` export renders the whole world** at an adaptive scale (≤8, capped near 8192px).
+> - **Format compatibility:** still `format: "nes-sprite-editor-v1"`; the tile doc's `map` now
+>   carries `worldW`/`worldH` (nesprite 1.0 ignores them and would just reset the arrange grid
+>   on such files; 1.0 files load here as a 1×1 world). Do not fork the format id.
+> - **Renames (same-origin safety + branding):** `LS_KEY = "nes-mapmaker-autosave"` — 1.0
+>   shares the github.io origin, so its key must never be written; `loadLocal()` falls back to
+>   reading `nesprite-autosave` once so 1.0 users keep their work. Export filenames are
+>   `nes-mapmaker-…`, the SW cache is `nes-mapmaker-vN`, the self-test is
+>   `nesMapmakerSelfTest()` (old name kept as an alias), and titles/OG/manifest say
+>   "nes mapmaker" with absolute URLs at `https://djessemann.github.io/nes-mapmaker/`.
+> - **Smoke test:** a Playwright script (session scratchpad, not committed) drives boot,
+>   self-tests, world resize/paint/nav/clear/undo, autosave round-trip, and 1.0-file loading
+>   headlessly against `file://index.html` — rerun the equivalent after UI changes.
 
 **nesprite** is a browser-based NES sprite & animation editor. It is a tiny static web app,
 deliberately kept minimal. This file records the delivery/repo/UI decisions so a future

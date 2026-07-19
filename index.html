@@ -3,25 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>nesprite</title>
-<meta name="description" content="Create NES sprites and background tiles in your browser — a pixel-art editor with the real NES palette, animation frames, tile arranging, and 6502/PNG export.">
+<title>nes mapmaker</title>
+<meta name="description" content="Create NES sprites, background tiles, and multi-screen game maps in your browser — a pixel-art editor with the real NES palette, animation frames, world arranging, and 6502/PNG export.">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#000000">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="nesprite">
-<meta property="og:title" content="nesprite — NES graphics maker">
-<meta property="og:description" content="Make NES sprites and background tiles in your browser.">
-<meta property="og:url" content="https://djessemann.github.io/nesprite/">
-<meta property="og:image" content="https://djessemann.github.io/nesprite/og.png">
+<meta property="og:site_name" content="nes mapmaker">
+<meta property="og:title" content="nes mapmaker — NES graphics &amp; map maker">
+<meta property="og:description" content="Make NES sprites, background tiles, and multi-screen game maps in your browser.">
+<meta property="og:url" content="https://djessemann.github.io/nes-mapmaker/">
+<meta property="og:image" content="https://djessemann.github.io/nes-mapmaker/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="nesprite — NES graphics maker">
-<meta name="twitter:description" content="Make NES sprites and background tiles in your browser.">
-<meta name="twitter:image" content="https://djessemann.github.io/nesprite/og.png">
+<meta name="twitter:title" content="nes mapmaker — NES graphics &amp; map maker">
+<meta name="twitter:description" content="Make NES sprites, background tiles, and multi-screen game maps in your browser.">
+<meta name="twitter:image" content="https://djessemann.github.io/nes-mapmaker/og.png">
 <style>
   :root {
     --bg: #000000; --ink: #ffffff; --line: #ffffff; --muted: #999999; --soft: #666666;
@@ -61,7 +61,7 @@
   .stage { display: flex; justify-content: center; padding: 8px 0;
     background: repeating-conic-gradient(#fff 0% 25%, #efefef 0% 50%) 50% / 22px 22px;
     border: 1px solid var(--line); touch-action: none; }
-  canvas#canvas { image-rendering: pixelated; touch-action: none; display: block; }
+  canvas#canvas { image-rendering: pixelated; touch-action: none; display: block; max-width: 100%; height: auto; }
 
   .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
@@ -126,9 +126,12 @@
   .modeseg button + button, .viewseg button + button { border-left-width: 0; }
   .modeseg button { font-size: 12px; padding: 7px 14px; letter-spacing: .5px; }
   .viewseg button { font-size: 13px; padding: 8px 16px; letter-spacing: .5px; }
-  .subrow { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-  .subrow .mapsize { color: var(--muted); font-size: 12px; margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .subrow { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+  .subrow .mapsize { color: var(--muted); font-size: 12px; margin-left: auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .subrow .mapsize input { width: 46px; }
+  .navrow { display: flex; align-items: center; gap: 6px; }
+  .navrow button { padding: 7px 12px; font-size: 13px; }
+  .navrow .pos { color: var(--muted); font-size: 12px; min-width: 40px; text-align: center; }
   .slots.four { grid-template-columns: repeat(4, 1fr); }
   .slot .tag { position: absolute; top: 3px; right: 5px; font-size: 9px; font-weight: 800; color: #000;
                background: rgba(255,255,255,.7); padding: 0 3px; letter-spacing: .5px; }
@@ -180,15 +183,26 @@
       <button data-view="draw" class="on">draw</button>
       <button data-view="arrange">arrange</button>
     </div>
-    <span class="mapsize" id="mapSize" style="display:none">map
+    <div class="viewseg" id="mapViewSeg" style="display:none">
+      <button data-mapview="screen" class="on">screen</button>
+      <button data-mapview="world">world</button>
+    </div>
+    <span class="mapsize" id="mapSize" style="display:none">screen
       <input type="number" id="mapW" min="1" max="32" value="8"> ×
       <input type="number" id="mapH" min="1" max="32" value="8">
+      world
+      <input type="number" id="worldW" min="1" max="16" value="1"> ×
+      <input type="number" id="worldH" min="1" max="16" value="1">
     </span>
   </div>
   <!-- CANVAS -->
   <div class="stage" id="stage"><canvas id="canvas"></canvas></div>
-  <div class="row" style="justify-content:flex-end;margin-top:6px">
-    <label class="tog"><input type="checkbox" id="gridChk" checked> grid</label>
+  <div class="row" style="justify-content:space-between;margin-top:6px">
+    <div class="navrow" id="navRow" style="display:none">
+      <button id="navL">◀</button><button id="navR">▶</button><button id="navU">▲</button><button id="navD">▼</button>
+      <span class="pos" id="navPos">1,1</span>
+    </div>
+    <label class="tog" style="margin-left:auto"><input type="checkbox" id="gridChk" checked> grid</label>
   </div>
   </div>
 
@@ -267,7 +281,9 @@
 </div>
 
 <script>
-/* nesprite — single-file, offline, mobile-friendly NES sprite editor. Format "nes-sprite-editor-v1". */
+/* nes-mapmaker — single-file, offline, mobile-friendly NES sprite & map editor.
+   The 2.0 line of nesprite; project format "nes-sprite-editor-v1" is shared with nesprite 1.0
+   (this app adds map.worldW/worldH, which 1.0 safely ignores). */
 
 const NES_PALETTE = [
   "#7C7C7C","#0000FC","#0000BC","#4428BC","#940084","#A80020","#A81000","#881400",
@@ -290,7 +306,10 @@ const state = {
   // sprite vs background tile mode (see CLAUDE.md). tileView: edit one tile ("draw")
   // or stamp tiles into a grid to preview them together ("arrange").
   mode: "sprite", tileView: "draw",
-  map: { w: 8, h: 8, cells: [] }, // arrange grid: each cell is a tile (frame) index, -1 = empty/backdrop
+  // arrange grid: w,h = cells per screen; worldW,worldH = the world in screens; cells spans
+  // the WHOLE world row-major (each cell a tile/frame index, -1 = empty/backdrop)
+  map: { w: 8, h: 8, worldW: 1, worldH: 1, cells: [] },
+  mapView: "screen", curScreen: { x: 0, y: 0 }, // arrange zoom (screen|world) + the open screen
   // sprite art and tile art are independent workspaces. The active one lives in the fields above;
   // the inactive one is stashed here and swapped in on mode toggle. Both are saved to the project.
   docs: { sprite: null, tile: null },
@@ -302,15 +321,32 @@ const W = () => state.tilesW * 8;
 const H = () => state.tilesH * 8;
 const isTile = () => state.mode === "tile";
 const isArrange = () => isTile() && state.tileView === "arrange";
+const isWorld = () => isArrange() && state.mapView === "world";
+const multiScreen = () => state.map.worldW > 1 || state.map.worldH > 1;
+const totW = () => state.map.w * state.map.worldW; // whole-world size in cells
+const totH = () => state.map.h * state.map.worldH;
+const viewW = () => isWorld() ? totW() : state.map.w; // cells shown on the arrange canvas
+const viewH = () => isWorld() ? totH() : state.map.h;
+const viewOX = () => isWorld() ? 0 : state.curScreen.x * state.map.w; // view origin in world cells
+const viewOY = () => isWorld() ? 0 : state.curScreen.y * state.map.h;
 const backdropColor = () => NES_PALETTE[state.palette[0]]; // slot 0 = drawn backdrop in tile mode
-const logW = () => isArrange() ? state.map.w * W() : W();
-const logH = () => isArrange() ? state.map.h * H() : H();
-function resizeMap(nw, nh, reset) {
-  const oc = state.map.cells || [], ow = state.map.w, oh = state.map.h, nc = new Array(nw * nh).fill(-1);
-  if (!reset) for (let y = 0; y < Math.min(nh, oh); y++) for (let x = 0; x < Math.min(nw, ow); x++) { const v = oc[y * ow + x]; if (v != null) nc[y * nw + x] = v; }
-  state.map = { w: nw, h: nh, cells: nc };
+const logW = () => isArrange() ? viewW() * W() : W();
+const logH = () => isArrange() ? viewH() * H() : H();
+function clampScreen() {
+  state.curScreen.x = Math.max(0, Math.min(state.curScreen.x, state.map.worldW - 1));
+  state.curScreen.y = Math.max(0, Math.min(state.curScreen.y, state.map.worldH - 1));
 }
-function ensureMap() { if (!state.map.cells || state.map.cells.length !== state.map.w * state.map.h) resizeMap(state.map.w, state.map.h, false); }
+function resizeMap(nw, nh, nww, nwh) { // content is kept by whole-world cell position
+  const oc = state.map.cells || [], ow = totW(), oh = totH();
+  const tw = nw * nww, th = nh * nwh, nc = new Array(tw * th).fill(-1);
+  for (let y = 0; y < Math.min(th, oh); y++) for (let x = 0; x < Math.min(tw, ow); x++) { const v = oc[y * ow + x]; if (v != null) nc[y * tw + x] = v; }
+  state.map = { w: nw, h: nh, worldW: nww, worldH: nwh, cells: nc };
+  clampScreen();
+}
+function ensureMap() {
+  state.map.worldW = state.map.worldW || 1; state.map.worldH = state.map.worldH || 1;
+  if (!state.map.cells || state.map.cells.length !== totW() * totH()) resizeMap(state.map.w, state.map.h, state.map.worldW, state.map.worldH);
+}
 // keep arrange-grid tile references valid when the tileset changes
 function remapInsert(p) { const c = state.map.cells; if (!c) return; for (let i = 0; i < c.length; i++) { if (c[i] < 0) continue; const t = cellTile(c[i]); c[i] = t >= p ? t + 1 : t; } }
 function remapDelete(d) { const c = state.map.cells; if (!c) return; for (let i = 0; i < c.length; i++) { if (c[i] < 0) continue; const t = cellTile(c[i]); c[i] = t === d ? -1 : (t > d ? t - 1 : t); } }
@@ -451,27 +487,42 @@ function render() {
   scheduleSave();
 }
 // Arrange view: stamp the tileset (frames) into a grid to preview tiles together.
+// Screen view shows the open screen; world view zooms out to every screen at once.
 function renderArrangeCanvas() {
   ensureMap();
-  const tw = W(), th = H(), z = state.cell, mw = state.map.w, mh = state.map.h;
+  const tw = W(), th = H(), z = state.cell, mw = viewW(), mh = viewH(), ox = viewOX(), oy = viewOY();
   canvas.width = mw * tw * z; canvas.height = mh * th * z;
   ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = backdropColor(); ctx.fillRect(0, 0, canvas.width, canvas.height);
   for (let cy = 0; cy < mh; cy++) for (let cx = 0; cx < mw; cx++) {
-    const cell = state.map.cells[cy * mw + cx]; if (cell < 0) continue;
+    const cell = state.map.cells[(oy + cy) * totW() + (ox + cx)]; if (cell < 0) continue;
     const fi = cellTile(cell);
     if (fi < state.frames.length) paintPixels(ctx, state.frames[fi].px, tw, th, z, cx * tw * z, cy * th * z);
   }
   if (state.showGrid) {
     const gc = gridColors();
-    ctx.lineWidth = 1; ctx.strokeStyle = gc.fine; ctx.beginPath();
-    for (let x = 0; x <= mw * tw; x++) { ctx.moveTo(x * z + .5, 0); ctx.lineTo(x * z + .5, mh * th * z); }
-    for (let y = 0; y <= mh * th; y++) { ctx.moveTo(0, y * z + .5); ctx.lineTo(mw * tw * z, y * z + .5); }
-    ctx.stroke();
-    ctx.lineWidth = 2; ctx.strokeStyle = gc.bound; ctx.beginPath(); // tile-cell boundaries
+    if (z >= 4) { // the per-pixel grid is unreadable noise when zoomed way out
+      ctx.lineWidth = 1; ctx.strokeStyle = gc.fine; ctx.beginPath();
+      for (let x = 0; x <= mw * tw; x++) { ctx.moveTo(x * z + .5, 0); ctx.lineTo(x * z + .5, mh * th * z); }
+      for (let y = 0; y <= mh * th; y++) { ctx.moveTo(0, y * z + .5); ctx.lineTo(mw * tw * z, y * z + .5); }
+      ctx.stroke();
+    }
+    ctx.lineWidth = z >= 4 ? 2 : 1; ctx.strokeStyle = gc.bound; ctx.beginPath(); // tile-cell boundaries
     for (let cx = 0; cx <= mw; cx++) { ctx.moveTo(cx * tw * z, 0); ctx.lineTo(cx * tw * z, mh * th * z); }
     for (let cy = 0; cy <= mh; cy++) { ctx.moveTo(0, cy * th * z); ctx.lineTo(mw * tw * z, cy * th * z); }
     ctx.stroke();
+  }
+  if (isWorld() && multiScreen()) { // screen seams + the open screen (drawn even with the grid off)
+    const gc = gridColors(), sw = state.map.w * tw * z, sh = state.map.h * th * z;
+    ctx.lineWidth = 3; ctx.strokeStyle = gc.bound; ctx.beginPath();
+    for (let sx = 0; sx <= state.map.worldW; sx++) { ctx.moveTo(sx * sw, 0); ctx.lineTo(sx * sw, canvas.height); }
+    for (let sy = 0; sy <= state.map.worldH; sy++) { ctx.moveTo(0, sy * sh); ctx.lineTo(canvas.width, sy * sh); }
+    ctx.stroke();
+    const [r, g, b] = hexToRgb(backdropColor());
+    ctx.save(); ctx.setLineDash([6, 4]); ctx.lineWidth = 3;
+    ctx.strokeStyle = (0.299 * r + 0.587 * g + 0.114 * b) < 128 ? "#fff" : "#000";
+    ctx.strokeRect(state.curScreen.x * sw + 1.5, state.curScreen.y * sh + 1.5, sw - 3, sh - 3);
+    ctx.restore();
   }
   scheduleSave();
 }
@@ -556,9 +607,9 @@ function renderFrames() {
 // ---- Drawing (mouse + touch) ----
 let drawing = false, lastCell = null;
 function cellFromPoint(clientX, clientY) {
-  const r = canvas.getBoundingClientRect();
-  const x = Math.floor((clientX - r.left) / state.cell);
-  const y = Math.floor((clientY - r.top) / state.cell);
+  const r = canvas.getBoundingClientRect(), s = canvas.width / r.width; // CSS may downscale the canvas
+  const x = Math.floor((clientX - r.left) * s / state.cell);
+  const y = Math.floor((clientY - r.top) * s / state.cell);
   if (x < 0 || y < 0 || x >= W() || y >= H()) return null;
   return { x, y };
 }
@@ -611,21 +662,32 @@ function pointerUp() { if (state.tool === "lasso") { if (lasso) lassoUp(); } els
 let mapDrawing = false, mapUndo = [];
 function pushMapUndo() { mapUndo.push(state.map.cells.slice()); if (mapUndo.length > 40) mapUndo.shift(); }
 function mapCellFromPoint(clientX, clientY) {
-  const r = canvas.getBoundingClientRect(), tw = W() * state.cell, th = H() * state.cell;
-  const cx = Math.floor((clientX - r.left) / tw), cy = Math.floor((clientY - r.top) / th);
-  if (cx < 0 || cy < 0 || cx >= state.map.w || cy >= state.map.h) return null;
+  const r = canvas.getBoundingClientRect(), s = canvas.width / r.width; // CSS may downscale the canvas
+  const tw = W() * state.cell, th = H() * state.cell;
+  const cx = Math.floor((clientX - r.left) * s / tw), cy = Math.floor((clientY - r.top) * s / th);
+  if (cx < 0 || cy < 0 || cx >= viewW() || cy >= viewH()) return null;
   return { cx, cy };
 }
 function mapStamp(cell) {
-  const i = cell.cy * state.map.w + cell.cx;
+  const i = (viewOY() + cell.cy) * totW() + (viewOX() + cell.cx);
   const v = (state.tool === "eraser") ? -1 : state.current; // place selected tile, or erase the cell
   if (state.map.cells[i] === v) return;
   state.map.cells[i] = v;
   render();
 }
+function openScreen(sx, sy) { // world view: tap a screen to open it for painting
+  state.curScreen = { x: sx, y: sy }; clampScreen();
+  state.mapView = "screen";
+  syncModeUI(); fitCanvas();
+}
 // ---- Pointer routing (mode-aware) ----
 function onDown(x, y) {
-  if (isArrange()) { if (state.tool === "lasso") return; const c = mapCellFromPoint(x, y); if (c) { pushMapUndo(); mapDrawing = true; mapStamp(c); } return; }
+  if (isArrange()) {
+    const c = mapCellFromPoint(x, y); if (!c) return;
+    if (isWorld()) { openScreen((c.cx / state.map.w) | 0, (c.cy / state.map.h) | 0); return; } // world = navigate
+    if (state.tool === "lasso") return;
+    pushMapUndo(); mapDrawing = true; mapStamp(c); return;
+  }
   const c = cellFromPoint(x, y); if (c) pointerDown(c);
 }
 function onMove(x, y) {
@@ -668,7 +730,12 @@ function syncModeUI() {
   document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on", b.dataset.mode === state.mode));
   document.querySelectorAll("#viewSeg button").forEach(b => b.classList.toggle("on", b.dataset.view === state.tileView));
   show("subRow", tile); show("mapSize", arrange);
+  show("mapViewSeg", arrange && multiScreen()); // screen|world zoom only matters once the world is >1 screen
+  document.querySelectorAll("#mapViewSeg button").forEach(b => b.classList.toggle("on", b.dataset.mapview === state.mapView));
+  show("navRow", arrange && !isWorld() && multiScreen());
+  document.getElementById("navPos").textContent = (state.curScreen.x + 1) + "," + (state.curScreen.y + 1);
   document.getElementById("mapW").value = state.map.w; document.getElementById("mapH").value = state.map.h;
+  document.getElementById("worldW").value = state.map.worldW; document.getElementById("worldH").value = state.map.worldH;
   // pencil -> "place" in arrange; eraser stays the eraser everywhere ("erase" in arrange).
   // In tile mode color 0 is the backdrop, so erasing simply paints the backdrop.
   document.querySelector('button[data-tool="pencil"]').innerHTML = '<span class="ico">' + ICON_PENCIL + '</span>' + (arrange ? "place" : "pencil");
@@ -676,6 +743,7 @@ function syncModeUI() {
   document.querySelector('button[data-tool="fill"]').style.display = arrange ? "none" : "";
   document.querySelector('button[data-tool="lasso"]').style.display = arrange ? "none" : "";
   document.querySelector(".tools").classList.toggle("two", arrange);
+  document.querySelector(".tools").style.display = isWorld() ? "none" : ""; // world view is navigate-only
   show("colorsHead", !arrange); show("slots", !arrange); show("nesPal", !arrange); // no per-pixel colors in arrange
   // arrange has no flip (that's a tile-draw op); leaves just clear + undo
   show("flipH", !arrange); show("flipV", !arrange);
@@ -691,13 +759,14 @@ function captureDoc() { // snapshot the live workspace
   return {
     tilesW: state.tilesW, tilesH: state.tilesH, palette: state.palette.slice(), fps: state.fps,
     frames: state.frames, current: state.current,
-    map: { w: state.map.w, h: state.map.h, cells: (state.map.cells || []).slice() },
+    map: { w: state.map.w, h: state.map.h, worldW: state.map.worldW || 1, worldH: state.map.worldH || 1, cells: (state.map.cells || []).slice() },
   };
 }
 function applyDoc(d) { // make a document the live workspace
   state.tilesW = d.tilesW; state.tilesH = d.tilesH; state.palette = d.palette.slice(); state.fps = d.fps;
   state.frames = d.frames; state.current = Math.min(d.current || 0, d.frames.length - 1); previewFrame = state.current;
-  state.map = { w: d.map.w, h: d.map.h, cells: (d.map.cells || []).slice() };
+  state.map = { w: d.map.w, h: d.map.h, worldW: d.map.worldW || 1, worldH: d.map.worldH || 1, cells: (d.map.cells || []).slice() };
+  state.mapView = "screen"; state.curScreen = { x: 0, y: 0 };
   state.undo = []; mapUndo = [];
   document.getElementById("tilesW").value = state.tilesW;
   document.getElementById("tilesH").value = state.tilesH;
@@ -707,7 +776,8 @@ function applyDoc(d) { // make a document the live workspace
 function defaultDoc(mode) { // a fresh, empty workspace for a mode (tiles default to a single 8x8)
   const tw = mode === "tile" ? 1 : 2, th = mode === "tile" ? 1 : 2;
   return { tilesW: tw, tilesH: th, palette: [0x0F, 0x16, 0x2A, 0x30], fps: 8,
-           frames: [{ name: "frame0", px: new Uint8Array(tw * 8 * th * 8) }], current: 0, map: { w: 8, h: 8, cells: [] } };
+           frames: [{ name: "frame0", px: new Uint8Array(tw * 8 * th * 8) }], current: 0,
+           map: { w: 8, h: 8, worldW: 1, worldH: 1, cells: [] } };
 }
 function refreshMode() { // sync UI + canvas to the current mode/view (no document swap)
   if (!isTile() && state.activeSlot === 0) state.activeSlot = 1; // slot 0 isn't paintable in sprite mode
@@ -737,14 +807,26 @@ function setView(view) {
 }
 document.querySelectorAll("#modeSeg button").forEach(b => b.onclick = () => applyMode(b.dataset.mode));
 document.querySelectorAll("#viewSeg button").forEach(b => b.onclick = () => setView(b.dataset.view));
-function applyMapSize() {
-  resizeMap(Math.max(1, Math.min(32, +document.getElementById("mapW").value || 1)),
-            Math.max(1, Math.min(32, +document.getElementById("mapH").value || 1)), false);
-  document.getElementById("mapW").value = state.map.w; document.getElementById("mapH").value = state.map.h;
-  fitCanvas();
+function setMapView(v) {
+  state.mapView = v === "world" ? "world" : "screen";
+  syncModeUI(); fitCanvas();
 }
-document.getElementById("mapW").addEventListener("change", applyMapSize);
-document.getElementById("mapH").addEventListener("change", applyMapSize);
+document.querySelectorAll("#mapViewSeg button").forEach(b => b.onclick = () => setMapView(b.dataset.mapview));
+function moveScreen(dx, dy) {
+  state.curScreen.x += dx; state.curScreen.y += dy; clampScreen();
+  syncModeUI(); render();
+}
+document.getElementById("navL").onclick = () => moveScreen(-1, 0);
+document.getElementById("navR").onclick = () => moveScreen(1, 0);
+document.getElementById("navU").onclick = () => moveScreen(0, -1);
+document.getElementById("navD").onclick = () => moveScreen(0, 1);
+function applyMapSize() {
+  const n = (id, max) => Math.max(1, Math.min(max, +document.getElementById(id).value || 1));
+  resizeMap(n("mapW", 32), n("mapH", 32), n("worldW", 16), n("worldH", 16));
+  if (!multiScreen()) state.mapView = "screen"; // a 1x1 world has no zoomed-out view
+  syncModeUI(); fitCanvas();
+}
+["mapW", "mapH", "worldW", "worldH"].forEach(id => document.getElementById(id).addEventListener("change", applyMapSize));
 function mutateFrame(fn) { commitSelection(); pushUndo(); fn(); render(); renderPreview(); renderFrames(); }
 // Flipping is a tile-draw / sprite operation (mirrors the actual pixels). Arrange has no flip.
 document.getElementById("flipH").onclick = () => mutateFrame(() => {
@@ -757,8 +839,18 @@ document.getElementById("flipV").onclick = () => mutateFrame(() => {
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) o[y * w + x] = s[(h - 1 - y) * w + x];
   state.frames[state.current].px = o;
 });
-document.getElementById("clearFrame").onclick = () => {
-  if (isArrange()) { pushMapUndo(); state.map.cells.fill(-1); render(); return; }
+document.getElementById("clearFrame").onclick = async () => {
+  if (isArrange()) {
+    if (isWorld() && multiScreen()) { // clearing every screen at once deserves a confirm
+      if (!(await confirmModal("Clear the whole world map?", "clear"))) return;
+      pushMapUndo(); state.map.cells.fill(-1); render(); return;
+    }
+    pushMapUndo(); // screen view: clear just the open screen
+    const ox = viewOX(), oy = viewOY();
+    for (let cy = 0; cy < state.map.h; cy++) for (let cx = 0; cx < state.map.w; cx++)
+      state.map.cells[(oy + cy) * totW() + (ox + cx)] = -1;
+    render(); return;
+  }
   mutateFrame(() => state.frames[state.current].px.fill(0));
 };
 document.getElementById("undoBtn").onclick = () => {
@@ -822,6 +914,8 @@ window.addEventListener("keydown", e => {
   if (map[e.key]) { setTool(map[e.key]); }
   if ("0123".includes(e.key) && (+e.key > 0 || isTile())) { state.activeSlot = +e.key; renderSlots(); renderNesPal(); }
   if ((e.ctrlKey || e.metaKey) && e.key === "z") { document.getElementById("undoBtn").click(); }
+  const nav = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+  if (nav[e.key] && isArrange() && !isWorld() && multiScreen()) { e.preventDefault(); moveScreen(...nav[e.key]); }
 });
 
 // ---- Serialization ----
@@ -833,7 +927,7 @@ function docToJson(d, withFps, withMap) {
   const o = { tilesWide: d.tilesW, tilesHigh: d.tilesH, palette: d.palette.slice(),
     frames: d.frames.map(f => ({ name: f.name, rows: pxToRows(f.px, w, h) })) };
   if (withFps) o.fps = d.fps;
-  if (withMap) o.map = { w: d.map.w, h: d.map.h, cells: (d.map.cells || []).slice() };
+  if (withMap) o.map = { w: d.map.w, h: d.map.h, worldW: d.map.worldW || 1, worldH: d.map.worldH || 1, cells: (d.map.cells || []).slice() };
   return o;
 }
 // Optional user-chosen project name — asked in-app on save, embedded in the file name,
@@ -855,9 +949,11 @@ function buildProject() {
 // ---- Local autosave: keep the working project across reloads/exports ----
 // A png/gif download can navigate the (installed) PWA away; without this the
 // in-memory project is lost on return. Persist it and restore it on boot.
-const LS_KEY = "nesprite-autosave";
+// Own key — nesprite 1.0 shares the github.io origin, so reusing its key would clobber it.
+// Read-only fallback: first boot adopts an existing nesprite autosave (never writes it back).
+const LS_KEY = "nes-mapmaker-autosave";
 function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(buildProject())); } catch (e) {} }
-function loadLocal() { try { const s = localStorage.getItem(LS_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+function loadLocal() { try { const s = localStorage.getItem(LS_KEY) || localStorage.getItem("nesprite-autosave"); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
 let saveTimer = null;
 // Debounced; skip while a selection/lasso is floating so we never commit it mid-drag.
 function scheduleSave() { if (sel || lasso) return; clearTimeout(saveTimer); saveTimer = setTimeout(saveLocal, 400); }
@@ -899,8 +995,8 @@ document.getElementById("newProject").onclick = async () => {
 };
 
 function download(filename, blob) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href); }
-// Unique, sortable export names so saves don't collide in one folder, e.g. nesprite-20260619-153012.json
-function fname(ext, tag) { const d = new Date(), p = n => String(n).padStart(2, "0"); return "nesprite-" + (tag ? tag + "-" : "") + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + "." + ext; }
+// Unique, sortable export names so saves don't collide in one folder, e.g. nes-mapmaker-20260619-153012.json
+function fname(ext, tag) { const d = new Date(), p = n => String(n).padStart(2, "0"); return "nes-mapmaker-" + (tag ? tag + "-" : "") + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + "." + ext; }
 document.getElementById("saveJson").onclick = async () => {
   const name = await promptModal("name your project", "save", projectName);
   if (name === null) return; // cancelled
@@ -912,7 +1008,7 @@ document.getElementById("loadJson").onclick = () => document.getElementById("fil
 document.getElementById("fileInput").onchange = e => {
   const file = e.target.files[0]; if (!file) return;
   const r = new FileReader();
-  r.onload = () => { try { loadProject(JSON.parse(r.result)); } catch (err) { alertModal("Couldn't open that file. Make sure it's a project you saved from nesprite (a .json file), then try again."); } };
+  r.onload = () => { try { loadProject(JSON.parse(r.result)); } catch (err) { alertModal("Couldn't open that file. Make sure it's a project you saved from nes mapmaker or nesprite (a .json file), then try again."); } };
   r.readAsText(file); e.target.value = "";
 };
 function parseDoc(o, mode) { // one workspace from saved JSON (null if absent)
@@ -925,7 +1021,9 @@ function parseDoc(o, mode) { // one workspace from saved JSON (null if absent)
     tilesW: tw, tilesH: th,
     palette: (o.palette && o.palette.length === 4) ? o.palette.slice() : d.palette,
     fps: o.fps || 8, frames, current: 0,
-    map: (o.map && o.map.w && o.map.h) ? { w: o.map.w, h: o.map.h, cells: (o.map.cells || []).slice() } : { w: 8, h: 8, cells: [] },
+    map: (o.map && o.map.w && o.map.h)
+      ? { w: o.map.w, h: o.map.h, worldW: o.map.worldW || 1, worldH: o.map.worldH || 1, cells: (o.map.cells || []).slice() }
+      : { w: 8, h: 8, worldW: 1, worldH: 1, cells: [] },
   };
 }
 function loadProject(p) {
@@ -1009,7 +1107,7 @@ document.getElementById("exportAsm").onclick = () => {
   const tw = state.tilesW, th = state.tilesH, tpf = tw * th, w = W(), h = H();
   const tile = isTile(), unit = tile ? "tile" : "frame", n = state.frames.length;
   const ticks = ticksPerFrame(state.fps);
-  let s = "; Generated by nesprite — https://djessemann.github.io/nesprite/\n";
+  let s = "; Generated by nes-mapmaker — https://djessemann.github.io/nes-mapmaker/\n";
   s += "; " + w + "x" + h + " px per " + unit + " (" + tw + "x" + th + " tiles of 8x8), " + n + " " + unit + (n === 1 ? "" : "s") + "\n";
   s += ";\n";
   s += "; FORMAT — NES CHR, 2bpp planar. Each 8x8 tile is 16 bytes:\n";
@@ -1071,7 +1169,8 @@ document.getElementById("exportPng").onclick = () => {
 document.getElementById("exportMap").onclick = () => {
   commitSelection(); ensureMap();
   const frames = gatedFrames(); if (!frames) return; // stamp decoded tiles — same source of truth as png/.s
-  const tw = W(), th = H(), mw = state.map.w, mh = state.map.h, scale = 8;
+  const tw = W(), th = H(), mw = totW(), mh = totH(); // always the whole world
+  const scale = Math.max(1, Math.min(8, Math.floor(8192 / Math.max(mw * tw, mh * th)))); // stay inside canvas size limits
   const cnv = document.createElement("canvas");
   cnv.width = mw * tw * scale; cnv.height = mh * th * scale;
   const c = cnv.getContext("2d"); c.imageSmoothingEnabled = false;
@@ -1160,10 +1259,11 @@ function runExportSelfTests() {
     t("round-trip " + tw + "x" + th, () => roundTripFrames([{ px: art(tw, th, tw + th * 3) }], tw, th));
   t("multi-frame", () => roundTripFrames([0, 1, 2].map(i => ({ px: art(2, 2, i) })), 2, 2));
   t("fully transparent", () => roundTripFrames([{ px: new Uint8Array(256) }], 2, 2));
-  if (fails.length) console.error("nesprite export self-tests FAILED:\n" + fails.join("\n"));
+  if (fails.length) console.error("nes-mapmaker export self-tests FAILED:\n" + fails.join("\n"));
   return fails.length ? fails : "all export self-tests passed";
 }
-window.nespriteSelfTest = runExportSelfTests;
+window.nesMapmakerSelfTest = runExportSelfTests;
+window.nespriteSelfTest = runExportSelfTests; // 1.0 name, kept so muscle memory still works
 
 // ---- Boot ----
 const restored = loadLocal();
