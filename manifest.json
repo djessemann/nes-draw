@@ -1,7 +1,7 @@
 {
-  "name": "nes mapmaker",
-  "short_name": "mapmaker",
-  "description": "Create NES sprites, background tiles, and multi-screen game maps in your browser.",
+  "name": "nesprite",
+  "short_name": "nesprite",
+  "description": "Make NES graphics in your browser.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#000000",

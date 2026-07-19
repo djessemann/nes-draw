@@ -33,12 +33,14 @@
 > - **Format compatibility:** still `format: "nes-sprite-editor-v1"`; the tile doc's `map` now
 >   carries `worldW`/`worldH` (nesprite 1.0 ignores them and would just reset the arrange grid
 >   on such files; 1.0 files load here as a 1×1 world). Do not fork the format id.
-> - **Renames (same-origin safety + branding):** `LS_KEY = "nes-mapmaker-autosave"` — 1.0
->   shares the github.io origin, so its key must never be written; `loadLocal()` falls back to
->   reading `nesprite-autosave` once so 1.0 users keep their work. Export filenames are
->   `nes-mapmaker-…`, the SW cache is `nes-mapmaker-vN`, the self-test is
->   `nesMapmakerSelfTest()` (old name kept as an alias), and titles/OG/manifest say
->   "nes mapmaker" with absolute URLs at `https://djessemann.github.io/nes-mapmaker/`.
+> - **Branding: the app is still called "nesprite"** (owner's choice) — title/OG/manifest all
+>   say "nesprite — NES graphics maker", descriptors focus on it being a NES graphics maker,
+>   and export filenames are `nesprite-…`. Only the *technical* keys differ from 1.0, for
+>   same-origin safety (both apps live on the github.io origin): `LS_KEY =
+>   "nes-mapmaker-autosave"` — 1.0's key must never be written; `loadLocal()` falls back to
+>   reading `nesprite-autosave` once so 1.0 users keep their work — and the SW cache is
+>   `nes-mapmaker-vN`. The self-test is `nesMapmakerSelfTest()` (old name kept as an alias).
+>   OG/absolute URLs point at `https://djessemann.github.io/nes-mapmaker/`.
 > - **Smoke test:** a Playwright script (session scratchpad, not committed) drives boot,
 >   self-tests, world resize/paint/nav/clear/undo, autosave round-trip, and 1.0-file loading
 >   headlessly against `file://index.html` — rerun the equivalent after UI changes.
